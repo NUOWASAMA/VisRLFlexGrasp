@@ -446,11 +446,10 @@ graph TD
 ## 👤贡献人员
 
 <p align="center">
-<a href="https://github.com/zhuge-Tom/VisRLFlexGrasp/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=zhuge-Tom/VisRLFlexGrasp" alt="所有贡献者"/>
-</a>
+  <a href="https://github.com/zhuge-Tom/VisRLFlexGrasp/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=zhuge-Tom/VisRLFlexGrasp" alt="所有贡献者" />
+  </a>
 </p>
-
 ## 📜版权声明
 
 本项目采用 MIT 开源协议，仅支持学术研究使用，禁止无授权商用，完整协议详见[LICENSE](./LICENSE)。
