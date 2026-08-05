@@ -113,6 +113,18 @@ VisRLFlexGrasp/
 * 统一使用 UPPER_SNAKE_CASE（全大写 + 下划线），如 MAX_SPEED_LIMIT
 * 禁止在代码中直接使用魔法数字（无字面定义的固定数值），所有固定数值必须定义为常量并加注释说明含义
 
+#### 3.1.5 仿真ttt模型与仿真内对象命名补充规范
+* 所有.coppeliaSim场景文件(.ttt)采用格式：<robot_type>_<task>_<env_tag>_<version>.ttt
+  示例：franka_pick_place_sim_v2.ttt
+* 临时调试仿真文件加tmp_前缀，禁止提交仓库：tmp_ur6_collision_test.ttt
+* 仿真场景内所有物体、关节、相机命名统一snake_case，使用固定业务前缀：
+   - robot_xx：机械臂本体、各关节
+   - gripper_xx：夹爪执行器、夹爪传感器
+   - obj_xx：待抓取目标物体
+   - obs_xx：障碍物模型
+   - cam_xx：视觉相机、深度相机
+* 仿真相关代码变量、加载路径名称必须和ttt内对象名保持一致，严格复用1.4全局术语字典。
+
 ### 3.2 代码格式与语法约束
 * 缩进统一使用 4 个空格，禁止使用 Tab 字符；行宽上限 120 字符，超出需合理换行。
 * 函数、类、控制语句的左大括号独占一行，右大括号与开头对齐；禁止单行写复杂逻辑。
