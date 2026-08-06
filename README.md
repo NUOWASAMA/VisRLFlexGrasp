@@ -185,7 +185,7 @@ HHHHHHHHHHHHHHHHHHHHHHHHHHH这里放视频HHHHHHHHHHHHHHHHHHHHHHHHH
 * 第七步：单模块独立自测
 * 第八步：开发调试一键启动
 * 第九步：完整故障排查体系
-* 如需查阅详细规范与教程：[STYLEGUIDE](./docs/STYLEGUIDE)
+* 如需查阅详细规范与教程：[STYLEGUIDE](./docs/STYLEGUIDE.md)
 
 
 
@@ -348,7 +348,7 @@ graph TD
 
  
 
-完整字段定义、接口清单与通信流程约定;本节规定项目代码统一书写要求，完整细则;完整存放规则与禁用要求;完整分支策略、提交规范与协作流程;完整排版、用词、配图书写标准，详见：[STYLEGUIDE](./docs/STYLEGUIDE)
+完整字段定义、接口清单与通信流程约定;本节规定项目代码统一书写要求，完整细则;完整存放规则与禁用要求;完整分支策略、提交规范与协作流程;完整排版、用词、配图书写标准，详见：[STYLEGUIDE](./docs/STYLE GUIDE.md)
 
 
 
@@ -366,7 +366,7 @@ graph TD
 
 5. 协作工具：Git + GitHub 代码仓库管理工具
 
-* **完整安装、配置、启动操作见[env_install](./docs/env_install)。**
+* **完整安装、配置、启动操作见[env_install](./docs/env_install.md)。**
 
 
 
