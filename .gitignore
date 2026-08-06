@@ -1,0 +1,70 @@
+# ===== 通用临时文件（STYLEGUIDE 2.5）=====
+tmp_*
+*.tmp
+*.log
+logs/
+*.bak
+*_old.*
+*_bak.*
+
+# ===== 敏感配置（STYLEGUIDE 2.4 / 6.2）=====
+.env
+.env.*
+!.env.example
+
+# ===== Python（algorithm/ backend/）=====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.ipynb_checkpoints/
+
+# ===== C++ 构建产物（embedded/）=====
+build/
+cmake-build-*/
+out/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.a
+*.lib
+*.pdb
+CMakeCache.txt
+CMakeFiles/
+
+# ===== 前端（frontend/）=====
+node_modules/
+dist/
+.cache/
+*.local
+
+# ===== 模型权重与数据集（>10MB 禁止入库，STYLEGUIDE 2.4）=====
+*.pt
+*.pth
+*.onnx
+*.h5
+*.ckpt
+*.weights
+
+# ===== 数据库文件 =====
+*.db
+*.sqlite
+*.sqlite3
+database/backup/*.sql
+
+# ===== IDE 与系统文件 =====
+.idea/
+.vscode/
+.vs/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+desktop.ini

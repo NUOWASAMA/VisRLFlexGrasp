@@ -1,0 +1,11 @@
+{
+    "server": {
+        "host": "127.0.0.1",
+        "port": 9000
+    },
+    "enable_hardware": false,
+    "log_level": "INFO",
+    "database": {
+        "path": "database/visrl_grasp.db"
+    }
+}
