@@ -1,0 +1,9 @@
+# 算法模块依赖（Python 3.9），版本经团队确认后锁定（STYLEGUIDE 6.1）
+# 地基阶段核心链路仅使用标准库；以下依赖随视觉 / RL 功能落地按需安装：
+# opencv-python==4.10.0.84                 # 图像处理
+# ultralytics==8.3.70                      # YOLOv8 果蔬目标检测
+# torch==2.5.1                             # 深度学习框架
+# gymnasium==1.0.0                         # RL 环境标准接口
+# stable-baselines3==2.4.1                 # RL 算法库（PPO/SAC）
+# coppeliasim-zmqremoteapi-client==2.0.6   # CoppeliaSim ZMQ Remote API 客户端
+# numpy==1.26.4                            # 数值计算

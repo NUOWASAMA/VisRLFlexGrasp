@@ -1,0 +1,10 @@
+{
+    "server": {
+        "host": "127.0.0.1",
+        "port": 9000
+    },
+    "log_level": "INFO",
+    "use_mock": true,
+    "detector_model_path": "algorithm/assets/fruit_yolov8.pt",
+    "rl_policy_path": "algorithm/assets/grasp_ppo.zip"
+}
