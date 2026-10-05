@@ -11,8 +11,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 add_executable(motion_control
     motion/main.cpp
     comm/tcp_client.cpp
+    motion/ur5_forward_kinematics.cpp
+    motion/ur5_inverse_kinematics.cpp
+    motion/trajectory_planner.cpp
+    motion/kinematics_utils.cpp
 )
 target_include_directories(motion_control PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+find_package(Eigen3 REQUIRED)
+target_link_libraries(motion_control PRIVATE Eigen3::Eigen)
 
 if(WIN32)
     target_link_libraries(motion_control PRIVATE ws2_32)
