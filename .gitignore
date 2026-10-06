@@ -62,6 +62,10 @@ dist/
 *.db
 *.sqlite
 *.sqlite3
+*.db.lock
+*.db-journal
+*.db-wal
+*.db-shm
 database/backup/*.sql
 
 # ===== IDE 与系统文件 =====

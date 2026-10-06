@@ -40,7 +40,7 @@ $env:VISRL_ENV = "sim"
 运行服务前启动 Python 后端：`python -m backend.main.main`。服务自动注册、心跳和重连，
 输出求解与轨迹规划结果，不执行抓取。`VISRL_ENV=real` 会明确拒绝启动，直到执行驱动实现。
 使用单配置文件时可传 `--config path/to/service.json`；模型文件路径相对该配置文件的目录。
-编译后的数学、协议和 TCP 集成测试随 CTest 运行，需 Python 3.9+。
+编译后的数学、协议和 TCP 集成测试随 CTest 运行；完整后端网关测试需 Python 3.10+。
 
 若 SDK 安装不完整，可在 Developer PowerShell 中使用已有的完整 SDK，或临时提供
 SDK 头文件、x64 导入库和 rc/mt 工具后用 Ninja 构建；不要把本机绝对路径写入仓库 CMake。
@@ -61,7 +61,20 @@ ctest --test-dir $task_build_dir -C Release --output-on-failure
 
 ## 第 5 章 后端服务环境
 
-待补充：依赖安装、SQLite 初始化（`database/scripts/`）、TCP 调度服务端口配置。
+第一阶段网关需要 Python 3.10+。仓库根目录执行：
+
+```powershell
+python -m venv .venv
+./.venv/Scripts/python.exe -m pip install -r backend/main/requirements.txt
+$env:VISRL_ENV = "sim"
+./.venv/Scripts/python.exe -m backend.main.main
+```
+
+HTTP 默认端口 8000，内部模块 TCP 端口 9000，均由 `backend/config/base.json` 管理。
+SQLite 默认文件 `database/visrl_grasp.db` 相对仓库定位，启动自动建表，历史任务重启后可查。
+同一数据库仅支持一个后端进程；不要启动多 worker。遗留运行任务标为 interrupted，不自动重发。
+API 文档入口为 `http://127.0.0.1:8000/docs`。请求示例、四个接口、错误码和测试方式见
+[后端规划网关](../api/backend_gateway.md)。此阶段仅规划，real 模式拒绝启动。
 
 ## 第 6 章 前端环境
 
