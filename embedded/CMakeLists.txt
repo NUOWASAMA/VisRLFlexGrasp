@@ -10,6 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 运动控制服务可执行程序（骨架阶段：TCP 接入 + 指令解析回环）
 add_executable(motion_control
     motion/main.cpp
+    comm/motion_service_main.cpp
     comm/tcp_client.cpp
     motion/ur5_forward_kinematics.cpp
     motion/ur5_inverse_kinematics.cpp
