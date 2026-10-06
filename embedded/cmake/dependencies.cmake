@@ -1,0 +1,53 @@
+# 文件功能：固定版本的 Eigen/jsoncons，支持第三方目录离线使用及校验下载
+include(FetchContent)
+set(VISRL_EIGEN_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/eigen3" CACHE PATH "Eigen 3.4.0 离线源码")
+set(VISRL_JSONCONS_SOURCE_DIR "${PROJECT_SOURCE_DIR}/third_party/jsoncons" CACHE PATH "jsoncons 1.10.0 离线源码")
+set(FETCHCONTENT_BASE_DIR "${PROJECT_SOURCE_DIR}/third_party/cache" CACHE PATH "依赖缓存位置")
+
+if(EXISTS "${VISRL_EIGEN_SOURCE_DIR}/Eigen/Core")
+    set(eigen_source "${VISRL_EIGEN_SOURCE_DIR}")
+else()
+    find_package(Eigen3 3.4.0 EXACT QUIET CONFIG)
+    if(NOT TARGET Eigen3::Eigen)
+        FetchContent_Declare(visrl_eigen
+            URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
+            URL_HASH SHA256=8586084f71f9bde545ee7fa6d00288b264a2b7ac3607b974e54d13e7162c1c72
+            SOURCE_SUBDIR header_only)
+        FetchContent_MakeAvailable(visrl_eigen)
+        set(eigen_source "${visrl_eigen_SOURCE_DIR}")
+    endif()
+endif()
+if(NOT TARGET Eigen3::Eigen)
+    file(READ "${eigen_source}/Eigen/src/Core/util/Macros.h" eigen_version)
+    foreach(pair "WORLD;3" "MAJOR;4" "MINOR;0")
+        list(GET pair 0 name)
+        list(GET pair 1 value)
+        if(NOT eigen_version MATCHES "#define EIGEN_${name}_VERSION[ \t]+${value}([\r\n]|$)")
+            message(FATAL_ERROR "离线 Eigen 必须为 3.4.0")
+        endif()
+    endforeach()
+    add_library(visrl_eigen_headers INTERFACE)
+    target_include_directories(visrl_eigen_headers SYSTEM INTERFACE "${eigen_source}")
+    add_library(Eigen3::Eigen ALIAS visrl_eigen_headers)
+endif()
+
+if(EXISTS "${VISRL_JSONCONS_SOURCE_DIR}/include/jsoncons/json.hpp")
+    set(jsoncons_source "${VISRL_JSONCONS_SOURCE_DIR}")
+else()
+    FetchContent_Declare(visrl_jsoncons
+        URL https://codeload.github.com/danielaparker/jsoncons/tar.gz/refs/tags/v1.10.0
+        URL_HASH SHA256=c829350a2eece662beb378143e2ab1c1cbb07d703687bf168626665a8a7d8bc1
+        SOURCE_SUBDIR header_only)
+    FetchContent_MakeAvailable(visrl_jsoncons)
+    set(jsoncons_source "${visrl_jsoncons_SOURCE_DIR}")
+endif()
+file(READ "${jsoncons_source}/include/jsoncons/config/version.hpp" jsoncons_version)
+foreach(pair "MAJOR;1" "MINOR;10" "PATCH;0")
+    list(GET pair 0 name)
+    list(GET pair 1 value)
+    if(NOT jsoncons_version MATCHES "#define JSONCONS_VERSION_${name}[ \t]+${value}([\r\n]|$)")
+        message(FATAL_ERROR "离线 jsoncons 必须为 1.10.0")
+    endif()
+endforeach()
+add_library(visrl_jsoncons_headers INTERFACE)
+target_include_directories(visrl_jsoncons_headers SYSTEM INTERFACE "${jsoncons_source}/include")

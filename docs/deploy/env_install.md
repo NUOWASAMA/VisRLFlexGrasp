@@ -18,7 +18,42 @@
 
 ## 第 3 章 嵌入式控制层环境（C++）
 
-待补充：VS2022 组件要求、CMake 配置、依赖库拉取（FetchContent）、编译验证命令。
+运动控制模块使用 C++17。Windows 开发环境需要 Visual Studio 2022 的“使用 C++ 的桌面开发”、
+MSVC v143、Windows SDK 及 CMake >= 3.20；仅安装 MSVC 编译器而缺少 SDK 时会出现
+`kernel32.lib`、UCRT 头文件或 `rc.exe` 缺失。
+
+依赖统一为 Eigen 3.4.0 和 jsoncons 1.10.0。已下载源码放在
+`embedded/third_party/eigen3/`、`embedded/third_party/jsoncons/`，缺失时 CMake 按固定
+URL 与 SHA256 自动获取；源码缓存不入库。离线目录及覆盖选项见
+[第三方依赖说明](../../embedded/third_party/README.md)。
+
+仓库根目录执行：
+
+```powershell
+cmake -S embedded -B embedded/build -G "Visual Studio 17 2022" -A x64
+cmake --build embedded/build --config Release --parallel
+ctest --test-dir embedded/build -C Release --output-on-failure
+$env:VISRL_ENV = "sim"
+./embedded/build/Release/motion_control.exe --config embedded/config/base.json
+```
+
+运行服务前启动 Python 后端：`python -m backend.main.main`。服务自动注册、心跳和重连，
+输出求解与轨迹规划结果，不执行抓取。`VISRL_ENV=real` 会明确拒绝启动，直到执行驱动实现。
+使用单配置文件时可传 `--config path/to/service.json`；模型文件路径相对该配置文件的目录。
+编译后的数学、协议和 TCP 集成测试随 CTest 运行，需 Python 3.9+。
+
+若 SDK 安装不完整，可在 Developer PowerShell 中使用已有的完整 SDK，或临时提供
+SDK 头文件、x64 导入库和 rc/mt 工具后用 Ninja 构建；不要把本机绝对路径写入仓库 CMake。
+
+若源码所在移动盘拒绝启动新编译的 EXE，可把构建目录放到本机用户目录，源码仍保留原位置：
+
+```powershell
+$task_build_dir = Join-Path $env:LOCALAPPDATA "VisRLFlexGrasp/build"
+cmake -S embedded -B $task_build_dir -G "Visual Studio 17 2022" -A x64
+cmake --build $task_build_dir --config Release --parallel
+ctest --test-dir $task_build_dir -C Release --output-on-failure
+& "$task_build_dir/Release/motion_control.exe" --config embedded/config/base.json
+```
 
 ## 第 4 章 算法层环境（Python）
 

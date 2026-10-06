@@ -85,6 +85,39 @@
 * `orientation`：四元数 [qx, qy, qz, qw]
 * `force_limit`：夹爪最大夹持力（牛顿），由 RL 策略输出
 
+### 3.4 控制服务规划模式（2026-10-06）
+
+`grasp_command.data` 可新增 `current_joint_angles`：六个有限关节角（弧度），
+用于限位内选解及轨迹起点；缺省使用控制模块配置的 `initial_joint_angles`。
+已有 `grasp_pose` 仍为 World Frame 下的 TCP 位姿，四元数顺序 `[qx,qy,qz,qw]`。
+
+当前控制服务仅接受 `execution_mode=plan_only` 且 `enable_hardware=false`。
+合法指令返回标准 `motion_status`，`data` 包含：
+
+| 字段 | 含义 |
+| --- | --- |
+| task_id | 原始任务标识 |
+| phase | `planned`：已完成求解与规划 |
+| is_success | `true` 仅表示本次规划成功 |
+| executed | 固定 `false`，未执行机器人或夹爪动作 |
+| execution_mode | `plan_only` |
+| reference_source | `request` 或 `config` |
+| joint_target | 限位内选出的六个关节角 |
+| joint_trajectory | 连续六轴关节角采样序列 |
+| duration_sec / sample_period_sec | 轨迹时长、采样周期（秒） |
+| solution_count | 回代验证后的解析候选数量 |
+| force_limit | 通过上限校验的夹持力元数据 |
+
+后端只有 `phase=placed` 才推进分拣计数，`planned` 不表示抓取完成。
+实际执行适配器接入后，须根据执行反馈生成 `placed`，禁止规划器虚报。
+错误返回 `error_report`，`data` 带 `task_id`、`phase=failed`、`is_success=false`、
+`executed=false`、`error_code`、`detail`：坏报文为 1001，非法参数为 1000，
+尚未收到注册确认为 1003，不可达/限位无解为 3001。现有后端记录错误报告，
+不会自动完成失败任务；业务层的失败收尾策略需在接执行器时统一落实。
+注册 ACK、心跳 ACK 与后端错误报告不会触发运动状态回发。
+
+控制服务单帧限制 1 MiB，规划采样数范围 2–4096，所有回复使用真实毫秒级时间戳。
+
 ## 第 4 章 全局错误码字典
 
 错误码按模块分段（STYLEGUIDE 4.4），新增错误码必须在本表登记：
