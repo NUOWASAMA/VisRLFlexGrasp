@@ -1,5 +1,4 @@
-# 后端调度服务依赖（Python 3.9）
-# 地基阶段仅使用标准库（asyncio/json/sqlite3），以下依赖随对应功能落地启用：
-# fastapi==0.115.12        # RESTful API（前端接入时启用）
-# uvicorn==0.34.0          # ASGI 服务器
-# websockets==13.1         # 前端实时推送
+# 第一阶段后端网关依赖（Python 3.10+）；SQLite 使用标准库 sqlite3
+fastapi==0.133.1
+uvicorn==0.41.0
+pydantic==2.13.4

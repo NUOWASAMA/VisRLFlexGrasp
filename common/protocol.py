@@ -43,6 +43,7 @@ class ErrorCode:
     INVALID_MESSAGE = 1001
     REQUEST_TIMEOUT = 1002
     NOT_REGISTERED = 1003
+    TASK_NOT_FOUND = 1004
     # 算法模块错误 2000-2999
     MODEL_LOAD_FAILED = 2000
     INFERENCE_TIMEOUT = 2001
@@ -51,6 +52,7 @@ class ErrorCode:
     SIM_CONNECT_FAILED = 3000
     MOTION_EXEC_FAILED = 3001
     EMERGENCY_STOP = 3002
+    ROBOT_BUSY = 3003
     # 通信模块错误 4000-4999
     TARGET_OFFLINE = 4000
     HEARTBEAT_TIMEOUT = 4001
@@ -116,7 +118,15 @@ def decode_message(line: bytes) -> Optional[Dict[str, Any]]:
         return None
     if not isinstance(message, dict):
         return None
-    for field in REQUIRED_FIELDS:
-        if field not in message:
-            return None
+    if any(field not in message for field in REQUIRED_FIELDS):
+        return None
+    if any(not isinstance(message[field], str) or not message[field]
+           for field in ("msg_type", "source", "target")) or not isinstance(message["msg"], str):
+        return None
+    if message["source"] not in ModuleId.ALL or message["target"] not in ModuleId.ALL:
+        return None
+    if type(message["code"]) is not int or not 0 <= message["code"] <= 4999:
+        return None
+    if type(message["timestamp"]) is not int or message["timestamp"] < 0 or not isinstance(message["data"], dict):
+        return None
     return message

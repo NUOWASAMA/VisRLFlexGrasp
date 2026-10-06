@@ -4,7 +4,17 @@
         "port": 9000
     },
     "enable_hardware": false,
+    "api": {
+        "host": "127.0.0.1",
+        "port": 8000
+    },
+    "gateway": {
+        "execution_mode": "plan_only",
+        "plan_timeout_sec": 5.0,
+        "motion_config_file": "embedded/config/base.json"
+    },
     "log_level": "INFO",
+    "log_file": "logs/backend.log",
     "database": {
         "path": "database/visrl_grasp.db"
     }

@@ -1,0 +1,2 @@
+# HTTP 网关集成测试客户端；先安装 backend/main/requirements.txt
+httpx==0.28.1

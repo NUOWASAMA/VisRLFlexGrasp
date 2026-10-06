@@ -45,6 +45,15 @@ class TestProtocol(unittest.TestCase):
         """缺少必填字段返回 None"""
         self.assertIsNone(protocol.decode_message(b'{"msg_type": "heartbeat"}\n'))
 
+    def test_decode_rejects_wrong_field_types(self):
+        """拒绝会导致路由或业务处理崩溃的字段，不能把布尔值当作错误码。"""
+        for change in ({"data": []}, {"code": True}, {"code": "0"}, {"timestamp": -1},
+                       {"msg_type": []}, {"source": "unknown"}, {"target": None}):
+            with self.subTest(change=change):
+                message = protocol.build_message("motion_status", "motion", "backend")
+                message.update(change)
+                self.assertIsNone(protocol.decode_message(protocol.encode_message(message)))
+
 
 if __name__ == "__main__":
     unittest.main()
