@@ -1,100 +1,123 @@
-// 文件功能：运动控制服务入口，TCP客户端业务逻辑，接收抓取指令并调用motion运动学模块
+// 文件功能：配置驱动的运动规划 TCP 服务，注册、心跳、重连与业务处理分离
 // 作者：VisRLFlexGrasp 项目组
-// 创建日期：2026-07-26
+// 创建日期：2026-10-06
+#include <array>
+#include <atomic>
 #include <chrono>
-#include <cstdio>
-#include <string>
+#include <condition_variable>
+#include <iostream>
+#include <mutex>
+#include <stdexcept>
 #include <thread>
+#include "comm/motion_config.h"
+#include "comm/motion_processor.h"
 #include "comm/tcp_client.hpp"
-// 引入运动学模块头文件
-#include "motion/ur5_forward_kinematics.h"
-#include "motion/ur5_inverse_kinematics.h"
-#include "motion/trajectory_planner.h"
-#include "motion/kinematics_utils.h"
-
 namespace
 {
-  // 调度服务地址，正式版本从 config 读取，当前硬编码用于联调测试
-  const char *const SERVER_HOST = "127.0.0.1";
-  constexpr int SERVER_PORT = 9000;
-  // 断线重连递增间隔（秒）
-  constexpr int RECONNECT_INTERVALS_SEC[] = {1, 3, 5};
-  constexpr int RECONNECT_STAGE_COUNT = 3;
-
-  // 构造注册报文
-  std::string build_register_message()
-  {
-    return R"({"msg_type":"register","source":"motion","target":"backend","code":0,"msg":"success","data":{"module":"motion"},"timestamp":0})";
-  }
-
-  // 构造心跳报文
-  std::string build_heartbeat_message()
-  {
-    return R"({"msg_type":"heartbeat","source":"motion","target":"backend","code":0,"msg":"success","data":{},"timestamp":0})";
-  }
-
-  // 构造运动状态上报报文
-  std::string build_motion_status_message(int code, const std::string &msg)
-  {
-    return R"({"msg_type":"motion_status","source":"motion","target":"backend","code":)" + std::to_string(code) + R"(,"msg":")" + msg + R"(","data":{},"timestamp":0})";
-  }
-} // namespace
-
-int main()
+using namespace vis_rl_grasp::comm;
+void serve_connection(TcpClient& client, const MotionConfig& config, const motion::RobotModel& model)
 {
-  using vis_rl_grasp::comm::TcpClient;
-  using namespace motion;
-
-  int reconnect_stage = 0;
-  while (true)
-  {
-    TcpClient client(SERVER_HOST, SERVER_PORT);
-    if (client.connect())
+    MotionProcessor processor(config, model);
+    Json registration = Json::object();
+    registration["module"] = "motion";
+    if (!client.send_line(build_message("register", registration).to_string()))
     {
-      std::printf("[INFO] 已连接调度服务 %s:%d\n", SERVER_HOST, SERVER_PORT);
-      reconnect_stage = 0;
-
-      // 发送模块注册报文
-      if (!client.send_line(build_register_message()))
-      {
-        std::printf("[WARN] 发送注册报文失败\n");
         client.close();
-        continue;
-      }
-
-      // 心跳线程：独立线程持续发送心跳包
-      std::thread heartbeat_thread([&client]()
-                                   {
-                while (client.send_line(build_heartbeat_message()))
-                {
-                    std::this_thread::sleep_for(std::chrono::duration<double>(vis_rl_grasp::comm::HEARTBEAT_INTERVAL_SEC));
-                }
-                std::printf("[WARN] 心跳发送中断，连接断开\n"); });
-
-      // 接收报文回调函数：收到后端下发的抓取指令
-      client.run_receive_loop([&client](const std::string &json_line)
-                              {
-                std::printf("[INFO] 收到报文：%s\n", json_line.c_str());
-                // ====================== (未完成)业务逻辑 ======================
-                // 1. 解析JSON，提取目标4×4齐次变换矩阵 T_target
-                // 2. 调用 UR5InverseKinematics 求解关节角
-                // 3. 调用 TrajectoryPlanner 生成运动轨迹
-                // 4. 计算完成，上报状态报文
-                // =========================================================
-                // 示例：上报状态（测试用）
-                client.send_line(build_motion_status_message(0, "receive grasp cmd, ready to solve")); });
-
-      // 等待心跳线程退出
-      heartbeat_thread.join();
-      client.close();
-      std::printf("[INFO] 连接已关闭\n");
+        return;
     }
-
-    // 断线重连逻辑
-    const int interval = RECONNECT_INTERVALS_SEC[reconnect_stage < RECONNECT_STAGE_COUNT ? reconnect_stage : RECONNECT_STAGE_COUNT - 1];
-    std::printf("[WARN] 连接断开，%d 秒后尝试重连\n", interval);
-    std::this_thread::sleep_for(std::chrono::seconds(interval));
-    ++reconnect_stage;
-  }
-  return 0;
+    std::atomic<bool> stopping{false};
+    std::mutex wait_mutex;
+    std::condition_variable wake;
+    std::thread heartbeat([&]
+    {
+        std::unique_lock<std::mutex> lock(wait_mutex);
+        while (!wake.wait_for(lock, std::chrono::duration<double>(HEARTBEAT_INTERVAL_SEC),
+            [&] { return stopping.load(); }))
+        {
+            lock.unlock();
+            if (!processor.is_registered() || !client.send_line(build_message("heartbeat", Json::object()).to_string()))
+            {
+                client.close();
+                return;
+            }
+            lock.lock();
+        }
+    });
+    auto cleanup = [&]
+    {
+        client.close();
+        stopping.store(true);
+        wake.notify_all();
+        heartbeat.join();
+    };
+    try
+    {
+        client.run_receive_loop([&](const std::string& line)
+        {
+            const auto reply = processor.handle_line(line);
+            if (reply && !client.send_line(reply->to_string()))
+            {
+                std::cerr << "[WARN] 业务回复发送失败，重建连接\n";
+                client.close();
+            }
+        });
+    }
+    catch (...)
+    {
+        cleanup();
+        throw;
+    }
+    cleanup();
+}
+}
+int main(int argc, char** argv)
+{
+    try
+    {
+        std::string config_path = "embedded/config/base.json";
+        for (int idx = 1; idx < argc; ++idx)
+        {
+            const std::string option = argv[idx];
+            if (option == "--help")
+            {
+                std::cout << "motion_control [--config embedded/config/base.json]\n"
+                    << "VISRL_ENV=dev/sim；当前输出规划轨迹，不执行机械臂动作。\n";
+                return 0;
+            }
+            if (option != "--config" || idx + 1 >= argc)
+            {
+                throw std::invalid_argument("未知参数或 --config 缺少路径");
+            }
+            config_path = argv[++idx];
+        }
+        const auto config = vis_rl_grasp::comm::MotionConfig::load(config_path);
+        const auto model = motion::RobotModel::load(config.model_path);
+        // 启动时校验参考关节；避免不断连接后因错误配置异常退出。
+        vis_rl_grasp::comm::MotionProcessor validation(config, model);
+        constexpr std::array<int, 3> RECONNECT_SECONDS = {1, 3, 5};
+        size_t reconnect_stage = 0;
+        while (true)
+        {
+            vis_rl_grasp::comm::TcpClient client(config.server_host, config.server_port);
+            if (client.connect())
+            {
+                std::cout << "[INFO] 已连接 " << config.server_host << ':' << config.server_port
+                    << "，模式 plan_only" << std::endl;
+                reconnect_stage = 0;
+                serve_connection(client, config, model);
+            }
+            const int interval = RECONNECT_SECONDS[reconnect_stage];
+            std::cerr << "[WARN] 连接断开，" << interval << " 秒后重连\n";
+            std::this_thread::sleep_for(std::chrono::seconds(interval));
+            if (reconnect_stage + 1 < RECONNECT_SECONDS.size())
+            {
+                ++reconnect_stage;
+            }
+        }
+    }
+    catch (const std::exception& error)
+    {
+        std::cerr << "[ERROR] " << error.what() << '\n';
+        return 1;
+    }
 }

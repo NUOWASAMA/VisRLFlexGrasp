@@ -39,6 +39,11 @@ out/
 CMakeCache.txt
 CMakeFiles/
 
+# 第三方源码本地缓存；版本与哈希由 embedded/cmake/dependencies.cmake 管理
+embedded/third_party/eigen3/
+embedded/third_party/jsoncons/
+embedded/third_party/cache/
+
 # ===== 前端（frontend/）=====
 node_modules/
 dist/

@@ -17,4 +17,5 @@ Start-Sleep -Seconds 2
 Write-Host "[2/2] 启动算法服务..."
 Start-Process python -ArgumentList "-m", "algorithm.algorithm_service" -WorkingDirectory $repo_root
 
-Write-Host "启动完成。运动控制服务（C++）需先经 CMake 构建后手动启动：embedded/build/motion_control.exe"
+Write-Host ("启动完成。运动控制服务（C++）构建后手动启动：" +
+    "embedded/build/Release/motion_control.exe --config embedded/config/base.json；当前仅规划轨迹。")

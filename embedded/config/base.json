@@ -1,0 +1,38 @@
+{
+  "server": {
+    "host": "127.0.0.1",
+    "port": 9000
+  },
+  "enable_hardware": false,
+  "execution_mode": "plan_only",
+  "model_file": "ur5_model.json",
+  "initial_joint_angles": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "max_force_limit": 40.0,
+  "trajectory": {
+    "sample_count": 101,
+    "minimum_duration_sec": 1.0,
+    "max_velocity": [
+      1.57,
+      1.57,
+      1.57,
+      1.57,
+      1.57,
+      1.57
+    ],
+    "max_acceleration": [
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0,
+      2.0
+    ]
+  }
+}

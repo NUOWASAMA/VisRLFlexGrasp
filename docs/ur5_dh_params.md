@@ -1,5 +1,10 @@
 # UR5 机械臂参数提取报告
 
+> **历史报告，2026-10-06 校正：** 下列 MDH 表及法兰称谓包含简化，不能直接用于当前场景求解。
+> 当前实现直接从 `arm_model.ttt` 提取完整关节层级，并使用 `UR5_link7` 为法兰。
+> 权威参数为 `embedded/config/ur5_model.json`，推导与验证见
+> [定制 UR5 模型与解析逆解](architecture/custom_ur5_ik.md)。
+
 > 来源文件：`1.urdf`（CoppeliaSim 导出）
 > 机器人名称：`UR5`
 > 末端执行器：`RG2` 两指夹爪
