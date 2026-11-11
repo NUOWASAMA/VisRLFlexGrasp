@@ -1,0 +1,8 @@
+{
+    "gateway": {
+        "log_level": "DEBUG"
+    },
+    "ui": {
+        "poll_interval_ms": 1000
+    }
+}

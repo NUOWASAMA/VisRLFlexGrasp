@@ -281,14 +281,17 @@ graph TD
 **VisRLFlexGrasp/
 ├── frontend/                                  # 前端交互层：UI界面、可视化、交互逻辑
 │   ├── src/
-│   │   ├── api/                                   # 前端接口请求
+│   │   ├── api/                                   # 前端接口请求（HTTP/WebSocket 客户端）
 │   │   ├── components/                 # 公共UI组件
 │   │   ├── views/                              # 页面视图
 │   │   ├── router/                             # 路由管理
+│   │   ├── composables/                        # 组合式函数（状态、轮询与参数复用）
+│   │   ├── config/                             # 前端默认常量与接口路径定义
 │   │   ├── assets/                             # 静态资源
 │   │   └── utils/                                 # 前端工具函数
+│   ├── gateway/                                  # 前端网关（Node：HTTP 代理 + WebSocket 推送）
 │   ├── public/                                   # 静态入口资源
-│   └── config/                                   # 项目构建与依赖配置
+│   └── config/                                   # 网关与界面分级配置（base/dev/sim/real）
 ├── backend/                                    # 后端调度层：接口服务、业务调度、中间件
 │   ├── app/
 │   │   ├── api/                                    # 接口路由
