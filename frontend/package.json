@@ -1,0 +1,27 @@
+{
+    "name": "visrl-flex-grasp-frontend",
+    "version": "0.1.0",
+    "private": true,
+    "description": "VisRLFlexGrasp 前端交互层：可视化面板与前端网关",
+    "type": "module",
+    "engines": {
+        "node": ">=20.19.0"
+    },
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "gateway": "node gateway/main.mjs",
+        "test": "node --test ../tests/unit/frontend/*.test.mjs"
+    },
+    "dependencies": {
+        "echarts": "6.1.0",
+        "vue": "3.5.45",
+        "vue-router": "4.6.4",
+        "ws": "8.22.2"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "6.0.10",
+        "vite": "8.3.8"
+    }
+}
