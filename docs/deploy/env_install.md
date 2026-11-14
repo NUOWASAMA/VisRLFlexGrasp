@@ -1,4 +1,4 @@
-# 环境安装与部署指南
+﻿# 环境安装与部署指南
 
 > 🚧 本文档为占位框架，各章节内容将随对应模块开发落地后补充，补充时须遵循 [STYLEGUIDE](../STYLEGUIDE.md) 第 6、7 章规范。
 
@@ -73,7 +73,7 @@ $env:VISRL_ENV = "sim"
 HTTP 默认端口 8000，内部模块 TCP 端口 9000，均由 `backend/config/base.json` 管理。
 SQLite 默认文件 `database/visrl_grasp.db` 相对仓库定位，启动自动建表，历史任务重启后可查。
 同一数据库仅支持一个后端进程；不要启动多 worker。遗留运行任务标为 interrupted，不自动重发。
-API 文档入口为 `http://127.0.0.1:8000/docs`。请求示例、四个接口、错误码和测试方式见
+API 文档入口为 `http://127.0.0.1:8000/docs`。请求示例、接口清单、错误码和测试方式见
 [后端规划网关](../api/backend_gateway.md)。此阶段仅规划，real 模式拒绝启动。
 
 ## 第 6 章 前端环境

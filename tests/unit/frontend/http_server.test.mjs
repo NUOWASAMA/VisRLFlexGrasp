@@ -1,4 +1,4 @@
-// 文件功能：前端网关 HTTP 服务集成测试（反代透传、网关配置/状态接口、未知 API 404、不可达 503、超时 504）
+// 文件功能：前端网关 HTTP 服务集成测试（反代透传、网关配置/状态接口、运行环境模式代理、未知 API 404、不可达 503、超时 504）
 // 作者：VisRLFlexGrasp 项目组
 // 创建日期：2026-11-11
 
@@ -26,6 +26,7 @@ function make_backend_handler(overrides = {}) {
         if (overrides[record.url] !== undefined) {
             return overrides[record.url];
         }
+        const request_path = record.url.split("?")[0];
         if (record.url === "/health") {
             return { status_code: 200, body: { code: 0, msg: "success", data: { status: "ok" }, timestamp: 1 } };
         }
@@ -43,6 +44,29 @@ function make_backend_handler(overrides = {}) {
         }
         if (record.url.startsWith("/tasks/")) {
             return { status_code: 200, body: { code: 0, msg: "success", data: { task_id: "x" }, timestamp: 4 } };
+        }
+        if (request_path === "/system/mode" && record.method === "GET") {
+            return {
+                status_code: 200,
+                body: {
+                    code: 0,
+                    msg: "success",
+                    data: {
+                        mode: "sim",
+                        available_modes: ["sim", "real"],
+                        hardware: { available: false },
+                        degraded: false,
+                        updated_at: 1700000000000,
+                    },
+                    timestamp: 6,
+                },
+            };
+        }
+        if (request_path === "/system/mode" && record.method === "POST") {
+            return {
+                status_code: 200,
+                body: { code: 0, msg: "success", data: { mode: "real", degraded: true }, timestamp: 7 },
+            };
         }
         return { status_code: 404, body: { code: 1004, msg: "后端未知路径", data: {}, timestamp: 5 } };
     };
@@ -254,3 +278,88 @@ test("POST /api/robot/plan 请求体超过上限返回 413", async (t) => {
     assert.equal(response.json.code, 1000);
     assert.equal(http_backend.requests.length, 0);
 });
+
+test("GET /api/system/mode 透传后端模式状态与查询串", async (t) => {
+    const { port, http_backend } = await setup_http_gateway(t);
+    const response = await http_request({ port, path: "/api/system/mode?detail=1" });
+    assert.equal(response.status, 200);
+    assert.equal(response.json.code, 0);
+    assert.equal(response.json.data.mode, "sim");
+    assert.deepEqual(response.json.data.available_modes, ["sim", "real"]);
+    assert.equal(response.json.data.degraded, false);
+    assert.equal(http_backend.requests.length, 1);
+    assert.equal(http_backend.requests[0].method, "GET");
+    assert.equal(http_backend.requests[0].url, "/system/mode?detail=1");
+});
+
+test("POST /api/system/mode 透传 JSON 请求体与后端 200 响应", async (t) => {
+    const { port, http_backend } = await setup_http_gateway(t);
+    const request_body = JSON.stringify({ mode: "real" });
+    const response = await http_request({
+        port,
+        path: "/api/system/mode",
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: request_body,
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.json.code, 0);
+    assert.equal(response.json.data.mode, "real");
+    assert.equal(response.json.data.degraded, true);
+    const record = http_backend.requests[0];
+    assert.equal(record.method, "POST");
+    assert.equal(record.url, "/system/mode");
+    assert.equal(record.body, request_body);
+    assert.match(record.headers["content-type"], /application\/json/);
+});
+
+test("POST /api/system/mode 非法 JSON 请求体返回 400 与 1001", async (t) => {
+    const { port, http_backend } = await setup_http_gateway(t);
+    const response = await http_request({
+        port,
+        path: "/api/system/mode",
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{not-json",
+    });
+    assert.equal(response.status, 400);
+    assert.equal(response.json.code, 1001);
+    assert.match(response.json.msg, /非法 JSON/);
+    assert.equal(http_backend.requests.length, 0);
+});
+
+test("POST /api/system/mode 透传后端 422 参数错误", async (t) => {
+    const handler = make_backend_handler({
+        "/system/mode": { status_code: 422, body: { code: 1000, msg: "请求参数非法", data: {}, timestamp: 8 } },
+    });
+    const { port } = await setup_http_gateway(t, { backend_handler: handler });
+    const response = await http_request({
+        port,
+        path: "/api/system/mode",
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode: "hardware" }),
+    });
+    assert.equal(response.status, 422);
+    assert.equal(response.json.code, 1000);
+});
+
+test("POST /api/system/mode 后端不可达返回 503 与 4000", async (t) => {
+    const closed_port = await get_unused_port();
+    const { port } = await setup_http_gateway(t, {
+        start_backend: false,
+        backend_http_port: closed_port,
+        use_tcp_backend: true,
+    });
+    const response = await http_request({
+        port,
+        path: "/api/system/mode",
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode: "sim" }),
+    });
+    assert.equal(response.status, 503);
+    assert.equal(response.json.code, 4000);
+    assert.match(response.json.msg, /后端服务不可达/);
+});
+

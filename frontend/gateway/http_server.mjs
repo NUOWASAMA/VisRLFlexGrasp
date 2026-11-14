@@ -5,6 +5,7 @@
 import {
     API_PATH,
     ERROR_CODE,
+    ERROR_MESSAGE,
     HTTP_METHOD,
     HTTP_STATUS,
     JSON_CONTENT_TYPE,
@@ -130,7 +131,16 @@ export class FrontendHttpServer {
             return;
         }
         if (method === HTTP_METHOD.POST && relative_path === API_PATH.ROBOT_PLAN) {
-            await this._proxy_plan(req, res, `${API_PATH.ROBOT_PLAN}${search}`);
+            await this._proxy_with_body(req, res, `${API_PATH.ROBOT_PLAN}${search}`);
+            return;
+        }
+        if (method === HTTP_METHOD.GET && relative_path === API_PATH.SYSTEM_MODE) {
+            await this._proxy(req, res, HTTP_METHOD.GET, `${API_PATH.SYSTEM_MODE}${search}`);
+            return;
+        }
+        if (method === HTTP_METHOD.POST && relative_path === API_PATH.SYSTEM_MODE) {
+            // 模式切换是网关唯一需要预校验 JSON 语法的代理接口：非法 JSON 在网关直接回 1001
+            await this._proxy_with_body(req, res, `${API_PATH.SYSTEM_MODE}${search}`, { validate_json: true });
             return;
         }
         if (method === HTTP_METHOD.GET && relative_path.startsWith(API_PATH.TASKS_PREFIX)
@@ -143,15 +153,19 @@ export class FrontendHttpServer {
     }
 
     /**
-     * 转发规划提交请求：读取 JSON 请求体后透传给后端。
+     * 转发带请求体的 POST 接口：读取请求体后透传给后端。
      *
-     * 入参：req Node HTTP 请求；res Node HTTP 响应；target_path 后端目标路径（含查询串）。
+     * 入参：req Node HTTP 请求；res Node HTTP 响应；target_path 后端目标路径（含查询串）；
+     *      options.validate_json 是否先校验请求体 JSON 语法（模式切换等需网关预校验的接口）。
      * 返回：Promise<void>。
      */
-    async _proxy_plan(req, res, target_path) {
+    async _proxy_with_body(req, res, target_path, { validate_json = false } = {}) {
         let body;
         try {
             body = await this._read_request_body(req);
+            if (validate_json) {
+                this._assert_json_body(body);
+            }
         } catch (error) {
             const status = error.http_status ?? HTTP_STATUS.BAD_REQUEST;
             const code = error.code ?? ERROR_CODE.INVALID_MESSAGE;
@@ -159,6 +173,28 @@ export class FrontendHttpServer {
             return;
         }
         await this._proxy(req, res, HTTP_METHOD.POST, target_path, body);
+    }
+
+    /**
+     * 校验请求体 JSON 语法；非法 JSON 映射 HTTP 400 + code 1001，不向后端透传。
+     *
+     * 入参：body 请求体 Buffer。
+     * 返回：无。
+     * 异常：非法 JSON 抛出带 http_status 与 code 的 Error；空请求体留给后端判定。
+     */
+    _assert_json_body(body) {
+        const text = body.toString("utf8");
+        if (text.trim() === "") {
+            return;
+        }
+        try {
+            JSON.parse(text);
+        } catch {
+            const error = new Error(ERROR_MESSAGE.INVALID_JSON);
+            error.http_status = HTTP_STATUS.BAD_REQUEST;
+            error.code = ERROR_CODE.INVALID_MESSAGE;
+            throw error;
+        }
     }
 
     /**

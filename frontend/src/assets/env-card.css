@@ -1,0 +1,394 @@
+/* 文件功能：运行环境入口页环境按钮样式（深色玻璃卡面、指针倾斜、跟随高光、扫光与辉光） */
+/* 作者：VisRLFlexGrasp 项目组 */
+/* 创建日期：2026-11-14 */
+
+/* --------------------------------------------------------------------- */
+/* 卡面：深色玻璃 + 跟随指针的倾斜与高光 */
+/* --------------------------------------------------------------------- */
+.env-card {
+    position: relative;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    perspective: 1100px;
+    border-radius: 22px;
+}
+
+.env-card__surface {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 292px;
+    height: 100%;
+    padding: 24px 26px 20px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    background: linear-gradient(
+        158deg,
+        rgba(255, 255, 255, 0.055),
+        rgba(255, 255, 255, 0.012) 46%,
+        rgba(0, 0, 0, 0.16)
+    );
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        0 30px 60px -34px rgba(0, 0, 0, 0.9);
+    transform: rotateX(calc(var(--tilt-y, 0) * 1deg)) rotateY(calc(var(--tilt-x, 0) * 1deg));
+    transform-style: preserve-3d;
+    transition:
+        transform 0.42s cubic-bezier(0.2, 0.7, 0.2, 1),
+        border-color 0.32s ease,
+        box-shadow 0.42s ease,
+        background 0.4s ease;
+}
+
+/* 卡面顶部细线装饰 */
+.env-card__surface::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 26px;
+    right: 26px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* 卡面顶部斜向扫光 */
+.env-card__surface::after {
+    content: "";
+    position: absolute;
+    inset: -35% -55%;
+    background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.09) 50%, transparent 58%);
+    transform: translateX(-62%);
+    transition: transform 0.95s cubic-bezier(0.2, 0.7, 0.2, 1), opacity 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.env-card:hover .env-card__surface::after {
+    transform: translateX(62%);
+    opacity: 1;
+}
+
+/* 跟随指针的柔光高亮 */
+.env-card__sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+        300px circle at var(--glow-x, 50%) var(--glow-y, 0%),
+        rgba(255, 255, 255, 0.11),
+        transparent 62%
+    );
+    opacity: 0;
+    transition: opacity 0.32s ease;
+    pointer-events: none;
+}
+
+.env-card:hover .env-card__sheen {
+    opacity: 1;
+}
+
+.env-card:hover {
+    z-index: 2;
+}
+
+.env-card:hover .env-card__surface {
+    transform: translateY(-6px) rotateX(calc(var(--tilt-y, 0) * 1deg)) rotateY(calc(var(--tilt-x, 0) * 1deg));
+}
+
+.env-card:active .env-card__surface {
+    transform: translateY(-1px) scale(0.994);
+    transition-duration: 0.1s;
+}
+
+.env-card:focus-visible {
+    outline: none;
+}
+
+.env-card[disabled] {
+    cursor: progress;
+}
+
+/* 仿真：森林绿玻璃 */
+.env-card--sim .env-card__surface {
+    background:
+        radial-gradient(120% 90% at 8% 0%, rgba(58, 122, 84, 0.42), transparent 58%),
+        linear-gradient(158deg, rgba(24, 42, 34, 0.92), rgba(8, 14, 12, 0.94));
+    border-color: rgba(105, 208, 67, 0.22);
+}
+
+.env-card--sim .env-card__surface::before {
+    background: linear-gradient(90deg, transparent, rgba(139, 226, 106, 0.46), transparent);
+}
+
+.env-card--sim:hover .env-card__surface {
+    border-color: rgba(105, 208, 67, 0.46);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 34px 64px -32px rgba(0, 0, 0, 0.92),
+        0 0 52px -16px rgba(105, 208, 67, 0.35);
+}
+
+.env-card--sim:focus-visible .env-card__surface {
+    border-color: rgba(105, 208, 67, 0.7);
+    box-shadow:
+        0 0 0 2px rgba(7, 11, 16, 1),
+        0 0 0 4px rgba(105, 208, 67, 0.55),
+        0 30px 60px -34px rgba(0, 0, 0, 0.9);
+}
+
+/* 真实：深海蓝玻璃 */
+.env-card--real .env-card__surface {
+    background:
+        radial-gradient(120% 90% at 8% 0%, rgba(46, 96, 176, 0.42), transparent 58%),
+        linear-gradient(158deg, rgba(16, 30, 48, 0.94), rgba(7, 12, 20, 0.95));
+    border-color: rgba(79, 157, 255, 0.22);
+}
+
+.env-card--real .env-card__surface::before {
+    background: linear-gradient(90deg, transparent, rgba(126, 184, 255, 0.48), transparent);
+}
+
+.env-card--real:hover .env-card__surface {
+    border-color: rgba(79, 157, 255, 0.48);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.14),
+        0 34px 64px -32px rgba(0, 0, 0, 0.92),
+        0 0 52px -16px rgba(79, 157, 255, 0.38);
+}
+
+.env-card--real:focus-visible .env-card__surface {
+    border-color: rgba(79, 157, 255, 0.7);
+    box-shadow:
+        0 0 0 2px rgba(7, 11, 16, 1),
+        0 0 0 4px rgba(79, 157, 255, 0.55),
+        0 30px 60px -34px rgba(0, 0, 0, 0.9);
+}
+
+/* 大尺寸线稿水印：右上区域出血排布，避开顶栏规格文字 */
+.env-card__glyph {
+    position: absolute;
+    top: 42px;
+    right: -28px;
+    width: 152px;
+    height: 152px;
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.3);
+    stroke-width: 1.25;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.46;
+    transition: opacity 0.35s ease, transform 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+    transform: translate3d(0, 0, 0);
+}
+
+.env-card--sim .env-card__glyph {
+    stroke: rgba(139, 226, 106, 0.52);
+}
+
+.env-card--real .env-card__glyph {
+    stroke: rgba(126, 184, 255, 0.54);
+}
+
+.env-card:hover .env-card__glyph {
+    opacity: 0.78;
+    transform: translate3d(0, -5px, 30px);
+}
+
+.env-card__glyph-wave {
+    opacity: 0.7;
+}
+
+.env-card__glyph-dash {
+    stroke-dasharray: 3 7;
+    opacity: 0.6;
+}
+
+/* --------------------------------------------------------------------- */
+/* 卡面内容 */
+/* --------------------------------------------------------------------- */
+.env-card__meta {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.env-card__index {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(222, 236, 250, 0.36);
+}
+
+.env-card__en {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: rgba(222, 236, 250, 0.5);
+}
+
+.env-card__spec {
+    margin-left: auto;
+    padding-right: 6px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: rgba(222, 236, 250, 0.3);
+}
+
+.env-card__body {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-width: 68%;
+}
+
+.env-card__label {
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: #f2f7fc;
+    line-height: 1.2;
+}
+
+.env-card__description {
+    font-size: 12px;
+    line-height: 1.85;
+    color: rgba(203, 220, 237, 0.62);
+}
+
+.env-card__status {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: rgba(205, 226, 208, 0.72);
+}
+
+.env-card__status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.06);
+}
+
+.env-card--sim .env-card__status {
+    color: rgba(163, 229, 137, 0.86);
+}
+
+.env-card--real .env-card__status {
+    color: rgba(146, 195, 255, 0.88);
+}
+
+.env-card__status--offline {
+    color: rgba(238, 197, 122, 0.9);
+}
+
+.env-card__foot {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.env-card__cta {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: rgba(240, 247, 253, 0.92);
+}
+
+.env-card__arrow {
+    display: inline-flex;
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+    transition: transform 0.32s ease, border-color 0.32s ease;
+}
+
+.env-card__arrow svg {
+    width: 13px;
+    height: 13px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: rgba(236, 245, 252, 0.8);
+}
+
+.env-card:hover .env-card__arrow {
+    transform: translateX(4px);
+    border-color: rgba(255, 255, 255, 0.34);
+}
+
+.env-card__current {
+    padding: 3px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: rgba(232, 242, 251, 0.62);
+}
+
+@media (max-width: 1120px) {
+    .env-card__surface {
+        min-height: 236px;
+    }
+
+    .env-card__glyph {
+        width: 112px;
+        height: 112px;
+    }
+}
+
+@media (max-width: 720px) {
+    .env-card__label {
+        font-size: 23px;
+    }
+
+    .env-card__surface {
+        padding: 20px 20px 16px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .env-card__surface,
+    .env-card__surface::after,
+    .env-card__glyph,
+    .env-card__sheen,
+    .env-card__arrow {
+        transition: none;
+    }
+
+    .env-card__surface,
+    .env-card:hover .env-card__surface {
+        transform: none !important;
+    }
+}

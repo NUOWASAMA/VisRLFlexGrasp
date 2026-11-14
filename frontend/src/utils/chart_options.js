@@ -1,63 +1,95 @@
-// 文件功能：ECharts 配置构建纯函数（六轴关节轨迹折线图、规划参考角柱状图），便于复用与单独校验
+// 文件功能：ECharts 配置构建纯函数（六轴关节轨迹折线图、规划参考角柱状图），配色随运行环境模式切换
 // 作者：VisRLFlexGrasp 项目组
 // 创建日期：2026-11-11
 import {
     CHART_ANIMATION_DURATION_MS,
-    CHART_AXIS_LINE_COLOR,
-    CHART_COLORS,
     CHART_FONT_FAMILY,
     CHART_MIN_ZOOM_POINTS,
-    CHART_SPLIT_LINE_COLOR,
     CHART_SYMBOL_SIZE,
-    CHART_TEXT_COLOR,
     CHART_VALUE_DECIMALS,
     CHART_ZOOM_MIN_POINT_DIVISOR,
     JOINT_COUNT,
     JOINT_NAMES,
     JOINT_SHORT_NAMES,
 } from '../config/defaults.js'
+import { get_chart_theme } from './chart_theme.js'
 import { build_trajectory_times, format_degrees, format_number } from './format.js'
 
-const AXIS_LABEL_STYLE = {
-    color: CHART_TEXT_COLOR,
-    fontFamily: CHART_FONT_FAMILY,
-    fontSize: 11,
-}
-
-const AXIS_LINE_STYLE = {
-    lineStyle: {
-        color: CHART_AXIS_LINE_COLOR,
-    },
-}
-
-const SPLIT_LINE_STYLE = {
-    lineStyle: {
-        color: CHART_SPLIT_LINE_COLOR,
-        type: 'dashed',
-    },
-}
-
-const LEGEND_STYLE = {
-    top: 4,
-    left: 'center',
-    itemWidth: 14,
-    itemHeight: 8,
-    textStyle: {
-        color: CHART_TEXT_COLOR,
+/**
+ * 轴标签样式。
+ * 入参：theme 图表主题。
+ * 返回：ECharts textStyle 片段。
+ */
+function build_axis_label_style(theme) {
+    return {
+        color: theme.text,
         fontFamily: CHART_FONT_FAMILY,
         fontSize: 11,
-    },
+    }
 }
 
-const TOOLTIP_STYLE = {
-    backgroundColor: 'rgba(18, 40, 32, 0.92)',
-    borderWidth: 0,
-    padding: [8, 12],
-    textStyle: {
-        color: '#f2f8f5',
-        fontFamily: CHART_FONT_FAMILY,
-        fontSize: 12,
-    },
+/**
+ * 轴线样式。
+ * 入参：theme 图表主题。
+ * 返回：ECharts axisLine 片段。
+ */
+function build_axis_line_style(theme) {
+    return {
+        lineStyle: {
+            color: theme.axis_line,
+        },
+    }
+}
+
+/**
+ * 网格分割线样式。
+ * 入参：theme 图表主题。
+ * 返回：ECharts splitLine 片段。
+ */
+function build_split_line_style(theme) {
+    return {
+        lineStyle: {
+            color: theme.split_line,
+            type: 'dashed',
+        },
+    }
+}
+
+/**
+ * 图例样式。
+ * 入参：theme 图表主题。
+ * 返回：ECharts legend 片段。
+ */
+function build_legend_style(theme) {
+    return {
+        top: 4,
+        left: 'center',
+        itemWidth: 14,
+        itemHeight: 8,
+        textStyle: {
+            color: theme.text,
+            fontFamily: CHART_FONT_FAMILY,
+            fontSize: 11,
+        },
+    }
+}
+
+/**
+ * 提示框样式。
+ * 入参：theme 图表主题。
+ * 返回：ECharts tooltip 片段。
+ */
+function build_tooltip_style(theme) {
+    return {
+        backgroundColor: theme.tooltip_background,
+        borderWidth: 0,
+        padding: [8, 12],
+        textStyle: {
+            color: theme.tooltip_text,
+            fontFamily: CHART_FONT_FAMILY,
+            fontSize: 12,
+        },
+    }
 }
 
 /**
@@ -71,6 +103,7 @@ export function build_trajectory_option(result) {
     if (point_count < 2) {
         return null
     }
+    const theme = get_chart_theme()
     const times = build_trajectory_times(point_count, result.duration_sec, result.sample_period_sec)
     const series = JOINT_SHORT_NAMES.map((short_name, joint_index) => ({
         name: short_name,
@@ -90,13 +123,13 @@ export function build_trajectory_option(result) {
         }),
     }))
     return {
-        color: CHART_COLORS,
+        color: theme.colors,
         animationDuration: CHART_ANIMATION_DURATION_MS,
         textStyle: {
             fontFamily: CHART_FONT_FAMILY,
         },
         tooltip: {
-            ...TOOLTIP_STYLE,
+            ...build_tooltip_style(theme),
             trigger: 'axis',
             axisPointer: {
                 type: 'line',
@@ -115,7 +148,7 @@ export function build_trajectory_option(result) {
             },
         },
         legend: {
-            ...LEGEND_STYLE,
+            ...build_legend_style(theme),
             data: JOINT_SHORT_NAMES,
         },
         grid: {
@@ -129,11 +162,11 @@ export function build_trajectory_option(result) {
             type: 'category',
             data: times,
             axisLabel: {
-                ...AXIS_LABEL_STYLE,
+                ...build_axis_label_style(theme),
                 hideOverlap: true,
                 formatter: (value) => format_number(value, 2),
             },
-            axisLine: AXIS_LINE_STYLE,
+            axisLine: build_axis_line_style(theme),
             axisTick: {
                 show: false,
             },
@@ -142,13 +175,13 @@ export function build_trajectory_option(result) {
             type: 'value',
             name: '关节角 (rad)',
             nameTextStyle: {
-                color: CHART_TEXT_COLOR,
+                color: theme.text,
                 fontFamily: CHART_FONT_FAMILY,
                 fontSize: 11,
             },
             scale: true,
             axisLabel: {
-                ...AXIS_LABEL_STYLE,
+                ...build_axis_label_style(theme),
                 formatter: (value) => format_number(value, 2),
             },
             axisLine: {
@@ -157,7 +190,7 @@ export function build_trajectory_option(result) {
             axisTick: {
                 show: false,
             },
-            splitLine: SPLIT_LINE_STYLE,
+            splitLine: build_split_line_style(theme),
         },
         dataZoom: [
             {
@@ -169,8 +202,8 @@ export function build_trajectory_option(result) {
                 height: 14,
                 bottom: 8,
                 borderColor: 'transparent',
-                backgroundColor: 'rgba(26, 97, 74, 0.06)',
-                fillerColor: 'rgba(26, 97, 74, 0.14)',
+                backgroundColor: theme.zoom_background,
+                fillerColor: theme.zoom_filler,
                 handleSize: '80%',
                 showDetail: false,
                 showDataShadow: false,
@@ -193,13 +226,14 @@ export function build_joint_bar_option(reference_angles) {
     if (numeric_angles.some((angle) => !Number.isFinite(angle))) {
         return null
     }
+    const theme = get_chart_theme()
     return {
         animationDuration: CHART_ANIMATION_DURATION_MS,
         textStyle: {
             fontFamily: CHART_FONT_FAMILY,
         },
         tooltip: {
-            ...TOOLTIP_STYLE,
+            ...build_tooltip_style(theme),
             trigger: 'axis',
             axisPointer: {
                 type: 'shadow',
@@ -223,8 +257,8 @@ export function build_joint_bar_option(reference_angles) {
         xAxis: {
             type: 'category',
             data: JOINT_SHORT_NAMES,
-            axisLabel: AXIS_LABEL_STYLE,
-            axisLine: AXIS_LINE_STYLE,
+            axisLabel: build_axis_label_style(theme),
+            axisLine: build_axis_line_style(theme),
             axisTick: {
                 show: false,
             },
@@ -233,12 +267,12 @@ export function build_joint_bar_option(reference_angles) {
             type: 'value',
             name: '关节角 (rad)',
             nameTextStyle: {
-                color: CHART_TEXT_COLOR,
+                color: theme.text,
                 fontFamily: CHART_FONT_FAMILY,
                 fontSize: 11,
             },
             axisLabel: {
-                ...AXIS_LABEL_STYLE,
+                ...build_axis_label_style(theme),
                 formatter: (value) => format_number(value, 2),
             },
             axisLine: {
@@ -247,7 +281,7 @@ export function build_joint_bar_option(reference_angles) {
             axisTick: {
                 show: false,
             },
-            splitLine: SPLIT_LINE_STYLE,
+            splitLine: build_split_line_style(theme),
         },
         series: [
             {
@@ -257,14 +291,14 @@ export function build_joint_bar_option(reference_angles) {
                 data: numeric_angles.map((angle, joint_index) => ({
                     value: angle,
                     itemStyle: {
-                        color: CHART_COLORS[joint_index % CHART_COLORS.length],
+                        color: theme.colors[joint_index % theme.colors.length],
                         borderRadius: [4, 4, 0, 0],
                     },
                 })),
                 label: {
                     show: true,
                     position: 'top',
-                    color: CHART_TEXT_COLOR,
+                    color: theme.text,
                     fontFamily: CHART_FONT_FAMILY,
                     fontSize: 10,
                     formatter: (params) => format_degrees(params.value),
@@ -276,7 +310,7 @@ export function build_joint_bar_option(reference_angles) {
                         show: false,
                     },
                     lineStyle: {
-                        color: CHART_AXIS_LINE_COLOR,
+                        color: theme.axis_line,
                         type: 'dashed',
                     },
                     data: [

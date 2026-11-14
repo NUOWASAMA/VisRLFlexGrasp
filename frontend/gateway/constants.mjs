@@ -140,6 +140,7 @@ export const API_PATH = Object.freeze({
     ROBOT_STATUS: "/robot/status",
     ROBOT_PLAN: "/robot/plan",
     TASKS_PREFIX: "/tasks/",
+    SYSTEM_MODE: "/system/mode",
     GATEWAY_CONFIG: "/gateway/config",
     GATEWAY_STATUS: "/gateway/status",
 });
