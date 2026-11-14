@@ -51,13 +51,11 @@
 运行环境模式接口与持久化（`test_system_mode.py`）。测试总入口与运行命令见
 [前端网关接口文档](../api/frontend_gateway.md) 第 7 章。
 
-### 2.4 已知问题（2026-11-14 已修复）
+### 2.4 集成测试关闭问题（已修复）
 
 `tests/integration/test_backend_gateway.py::test_identity_bypass_and_duplicate_registration`
-此前在 Python 3.12.4 下永久挂起，导致整目录 `discover` 无法一次跑完。根因是
-`backend/comm/tcp_server.py::close()` 先 `wait_closed()` 后取消客户端任务，
-被拒绝的重名注册连接使关闭流程阻塞；已改为先取消客户端任务再等待监听套接字关闭，
-整目录 35 项集成测试现可一次通过（提交见 `fix: 修复内部 TCP 服务关闭顺序导致的 Python 3.12 挂起`）。
+此前在 Python 3.12.4 下挂起，根因是 `backend/comm/tcp_server.py::close()` 的关闭顺序。
+该问题已修复，整目录 35 项集成测试在记录的基线上通过；旧挂起问题不再作为当前风险。
 
 
 ## 第 3 章 本轮新增：前端交互层
@@ -162,11 +160,11 @@ sequenceDiagram
 | 真实 YOLOv8 视觉 | 未开始：`FruitDetector` 走模拟检测（3 个目标递减） | 目标检测与位姿不真实，算法层数据为构造值 | 数据集与权重外部存储分发（>10MB 不入库），深度相机图像链路 |
 | RL 策略训练与推理 | 未开始：`GraspPolicy` 降级为几何默认策略 | 抓取姿态与夹持力无学习效果，M4 无训练产物 | Gymnasium 仿真环境、SB3 PPO 训练脚本与评估报告 |
 | 前端 3D 展示 / Laya | 未开始：当前仅 2D 图表、表格与事件日志 | 演示效果与答辩展示受限 | 执行反馈数据可用后再接 3D 场景 |
-| M3 一键仿真联调 | 未完成：`deploy/start_sim.ps1`（后端 + 算法）与 `deploy/start_frontend.ps1`（前端网关）分别可用，C++ 服务仍需手动构建启动，无统一总控脚本 | 联调步骤多、易漏启动顺序；M3 验收条件不满足 | 执行驱动完成后编排全链路启动与健康检查 |
+| M3 一键仿真联调 | 规划态本地总控入口已提供：`deploy/start_stack.ps1` 可按顺序启动后端、算法、现有 C++ 规划服务和前端网关，并检查 HTTP/TCP 就绪；不含 CoppeliaSim 执行 | 可减少规划链路手动启动步骤；M3 闭环验收仍不满足 | CoppeliaSim 执行驱动、放置反馈和计数尚未实现 |
 | `v0.1.0` 打 Tag | 未完成 | M3 里程碑未标记，无版本说明与 Demo 视频 | M3 验收通过后按 STYLEGUIDE 5.5 执行 |
 | 文档债 | `README.md` 仍有占位内容与失效链接（`./docs/STYLE GUIDE.md` 路径含空格、`./docs/env_install.md` 实际为 `docs/deploy/env_install.md`）；`env_install.md` 第 2、4、7 章仍为「待补充」 | 影响新成员上手与结题文档质量 | 各模块落地后统一修订 |
 | `deploy/start_sim.ps1` 编码兼容 | 既有脚本为 UTF-8 无 BOM，在本机 Windows PowerShell 5.1 下解析中文报 3 处语法错误；改用 PowerShell 7 可执行（预存问题，本轮未改动该文件，已在环境文档第 8 章记录） | 一键启动脚本在 PS 5.1 下不可用，需手动启动后端与算法服务或使用 PS 7 | 后续 bugfix 分支为脚本加 UTF-8 BOM 或统一约定 PS 7 |
-| 既有集成用例挂起（预存问题） | `test_identity_bypass_and_duplicate_registration` 在 Python 3.12.4 下永久挂起（`asyncio.Server.wait_closed` 与 `backend/comm/tcp_server.py` 的 `close()` 关闭顺序不匹配，稳定复现，与本轮前端改动无关） | `tests/integration` 整目录 `discover` 无法一次跑完，CI 需按文件/排除该用例运行 | 由项目负责人裁决：修改既有后端关闭顺序或调整既有测试；不在本轮写作用域 |
+| real 环境配置边界 | 各模块 `real.json` 已统一为 `enable_hardware=false`、`execution_mode=plan_only`、模拟检测；真实硬件驱动接入前不得把配置改成可执行模式 | 避免预览环境配置误导为实机能力 | 接入并验收硬件适配器后再单独启用 |
 
 ## 第 5 章 里程碑对照（M1–M5）
 
@@ -194,8 +192,8 @@ flowchart LR
 1. **优先打通执行链路（M3 关键路径）**：按技术选型接入 CoppeliaSim ZMQ Remote API，
    实现执行适配器并回传 `motion_status(phase=placed, is_success=true)`；
    只有 `placed` 才推进后端分拣计数，禁止规划器虚报执行结果。
-2. **补齐一键仿真联调**：在现有 `deploy/start_sim.ps1` 与 `deploy/start_frontend.ps1` 基础上
-   增加 C++ 规划服务构建/启动与健康检查，形成 M3 验收脚本；统一 `logs/` 日志与端口检查。
+2. **维护规划态启动入口**：使用 `deploy/start_stack.ps1` 启动现有规划链路；下一步把启动编排扩展到
+   CoppeliaSim 场景与执行反馈后，才可将其作为 M3 验收脚本。日志写入 `logs/stack/`。
 3. **前端增强**：接入执行阶段、分拣计数与夹爪状态展示；3D/Laya 展示排在执行链路可用之后，
    避免展示层先于数据层返工。前端交互层自身的后续加固项：
    - 网关在 TCP 注册阶段增加独立超时，避免后端异常时不重连（当前后端必定应答或断开，风险低）；
@@ -211,9 +209,9 @@ flowchart LR
 
 * 评估依据：仓库工作区代码与 `docs/` 文档、本轮实际运行的测试命令（见第 2.2 节）、
   以及 [项目结构优化与开发推进方案](project_optimization_plan.md) 的里程碑定义。
-* 本轮验证环境：仓库 `.venv`（Python 3.12.4，基于 Anaconda 3.12.4）、Node.js 24.21.0 /
-  npm 11.19.0、CMake 4.4.3 + Visual Studio 2022 17.14.42（Release）；
-  `embedded/build/Release/motion_control.exe` 已构建。集成基线为 17/18 通过（1 项预存挂起见第 2.4 节）。
+* 记录的测试基线：Python 集成测试 35/35、前端 Node 单测 107/107、前端全链路 e2e 1/1、C++ CTest 3/3；
+  本次配置与启动入口优化未重新运行这些测试。本地已有 C++ 二进制位于 `embedded/build/native/`；
+  Release 目录若不存在，总控脚本会回退使用该 native 构建。
 * 未连接实体硬件，也未启动 CoppeliaSim 场景；涉及执行、力控与真实视觉的结论一律按「未完成」处理。
 * 前端交互层的接口细节以 [前端网关接口文档](../api/frontend_gateway.md) 为准；
   文档与实现不一致时以代码为准，并应同步修订文档（STYLEGUIDE 7.4）。

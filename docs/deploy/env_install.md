@@ -137,26 +137,42 @@ npm test
 
 ## 第 7 章 多环境配置切换（dev / sim / real）
 
-待补充：各模块 `config/` 分级配置说明、`.env.example` 使用方式、`enable_hardware` 切换流程。
+各模块按 `base.json` 加环境覆盖文件的方式加载配置。`VISRL_ENV` 可取 `dev`、`sim` 或 `real`；
+未设置时按模块默认值加载。`dev` 与 `sim` 用于本地开发和仿真规划联调。
+
+当前 `real` 仅表示界面预览模式。后端与 C++ 运动服务仍使用 `plan_only`，算法仍使用模拟检测；
+三个模块的 `real.json` 明确保持 `enable_hardware=false`，防止未接入执行驱动时误启硬件路径。
+切换 UI 上的「仿真 / 真实」选择会持久化显示模式，但不会改变控制能力。只有硬件驱动、急停、
+限位与现场验收完成后，才能调整这些安全配置。
 
 ## 第 8 章 一键启动与故障排查
 
 ### 8.1 一键启动脚本
 
-仿真模式按「后端 → 运动控制（C++）→ 前端网关」的依赖顺序启动，运动控制服务仍需手动构建并启动：
+规划态本地服务可通过 `deploy/start_stack.ps1` 按「后端 → 算法 / C++ 规划服务 → 前端网关」启动；
+该入口不启动 CoppeliaSim，也不执行机械臂动作：
 
 | 脚本 | 作用 | 启动的服务 |
 | ---- | ---- | ---------- |
 | `deploy/start_sim.ps1` | 仿真模式拉起后端调度服务与算法服务 | `backend.main.main`、`algorithm.algorithm_service` |
 | `deploy/start_frontend.ps1` | 前端网关一键启动 | `npm run gateway`（必要时先 `npm install`，`frontend/dist` 缺失时先 `npm run build`） |
+| `deploy/start_stack.ps1` | 规划态本地总控入口，检查后端 HTTP/TCP、运动规划在线与前端网关就绪 | 后端、算法、C++ 规划服务、前端网关 |
 
 仓库根目录执行：
 
 ```powershell
+powershell -File deploy/start_stack.ps1
+
+# 如需分开启动，使用以下两个脚本；C++ 规划服务需手动启动
 powershell -File deploy/start_sim.ps1
 powershell -File deploy/start_frontend.ps1
 powershell -File deploy/start_frontend.ps1 -Env dev -Build
 ```
+
+总控入口要求先存在 `.venv` 后端环境、Node.js 20.19+ 和可用的 C++ 规划二进制；
+它优先使用 `embedded/build/Release/motion_control.exe`，其次使用 `embedded/build/native/motion_control.exe`。
+依赖缺失或端口状态不完整时会停止并提示原因。日志写入 `logs/stack/`。当前启动链路仍是
+`plan_only`，`motion_online=true` 只代表规划服务在线，不代表仿真执行或真实机械臂连接。
 
 `deploy/start_frontend.ps1` 支持两个可选参数：`-Env`（`dev` / `sim` / `real`，缺省 `sim`，
 作为 `VISRL_ENV` 传给前端网关）与 `-Build`（强制重新执行 `npm run build`）。

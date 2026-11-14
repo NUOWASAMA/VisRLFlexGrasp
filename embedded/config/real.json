@@ -1,4 +1,4 @@
 {
-  "enable_hardware": true,
-  "execution_mode": "hardware"
+  "enable_hardware": false,
+  "execution_mode": "plan_only"
 }
