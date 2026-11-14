@@ -1,4 +1,4 @@
-# 后端规划网关：第一阶段
+﻿# 后端规划网关：第一阶段
 
 ## 范围与通信关系
 
@@ -23,7 +23,7 @@ TCP source 必须与会话注册身份一致；同名模块已有在线会话时
 
 ## 请求与返回
 
-四个业务接口：
+四个规划相关业务接口（另有运行环境模式接口，见下文）：
 
 | 方法与路径 | 用途 |
 | --- | --- |
@@ -84,10 +84,96 @@ HTTP 统一响应：
 规划提交后出现的错误记录在任务 `error`：1002 为等待结果超时，4000 为运动服务断线，
 3001 为不可达、限位无解或结果校验失败。查询任务本身仍返回 HTTP 200，查看其终态和 error。
 
+## 运行环境模式接口
+
+前端入口页的「仿真环境 / 真实环境」两个按钮通过以下接口切换并持久化运行环境模式。
+模式只表示当前界面与服务所处的环境选择，**不改变** `plan_only` 规划逻辑：规划统一仍由
+`RobotService` 下发，结果仍为 `executed=false`。
+
+| 方法与路径 | 用途 | 典型响应 |
+| --- | --- | --- |
+| `GET /system/mode` | 查询当前模式、可选模式与真实硬件可用性 | `200`，`data` 为模式状态对象 |
+| `POST /system/mode` | 切换并持久化模式，请求体 `{"mode": "sim"}` 或 `{"mode": "real"}` | `200`，`data` 为切换后的模式状态对象 |
+
+模式状态 `data` 字段：
+
+| 字段 | 类型 | 含义 |
+| --- | --- | --- |
+| `mode` | string | 当前模式，取值为 `sim` 或 `real` |
+| `available_modes` | array | 允许切换的模式列表，固定为 `["sim", "real"]` |
+| `hardware.available` | boolean | 真实控制柜、夹爪与相机是否可用；当前恒为 `false` |
+| `hardware.controller` | string | 机械臂型号，固定为 `UR5` |
+| `hardware.controller_connected` | boolean | 控制柜是否已连接；当前恒为 `false` |
+| `hardware.adapter` | string | 真实硬件适配器状态；当前恒为 `unavailable` |
+| `hardware.reason` | string | 硬件不可用原因，说明真实硬件在 M5 阶段接入 |
+| `degraded` | boolean | `mode=real` 且硬件不可用时为 `true`，仿真模式恒为 `false` |
+| `updated_at` | integer | 最近一次模式写入时间（Unix 毫秒） |
+
+示例（首次启动的默认仿真状态）：
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "mode": "sim",
+    "available_modes": ["sim", "real"],
+    "hardware": {
+      "available": false,
+      "controller": "UR5",
+      "controller_connected": false,
+      "adapter": "unavailable",
+      "reason": "真实控制柜、夹爪与相机适配器尚未接入（M5 阶段实现）"
+    },
+    "degraded": false,
+    "updated_at": 1700000000000
+  },
+  "timestamp": 1700000000000
+}
+```
+
+**真实环境降级语义**：真实环境当前没有硬件接入，但允许切换到 `real` 用于蓝色真实环境界面预览；
+此时必须如实返回 `hardware.available=false`、`degraded=true`，前端不得把 `real` 展示为已连接
+控制柜或已执行抓取。启动阶段的环境变量 `VISRL_ENV=real` 仍被配置校验拒绝（见本文末尾），
+本接口只切换运行时界面模式，不加载硬件驱动。
+
+**持久化与重启**：模式写入 SQLite 的 `system_mode` 单行表（`id=1`，`mode` 仅接受 `sim`/`real`，
+记录更新时间）；启动时若没有记录则写入默认 `sim`。后端重启后保持上次选择。
+
+请求体规则：只接受对象字段 `mode`，取值为字符串 `sim` 或 `real`；拒绝额外字段、数字/布尔/数组
+伪装以及大小写变体，非法请求由统一校验返回 `422` + `code=1000`。模式切换串行执行，状态读取
+通过工作线程短连接访问 SQLite，不阻塞规划链路与 TCP 心跳。
+
+对既有接口的兼容扩展（只新增字段，不删除、不重命名原有字段）：
+
+| 接口 | 新增字段 |
+| --- | --- |
+| `GET /health` | `data.mode` |
+| `GET /robot/status` | `data.mode`、`data.hardware_available` |
+
+示例（PowerShell）：
+
+```powershell
+Invoke-RestMethod -Uri http://127.0.0.1:8000/system/mode
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/system/mode `
+    -ContentType application/json -Body '{"mode": "real"}'
+```
+
+示例（curl）：
+
+```bash
+curl http://127.0.0.1:8000/system/mode
+curl -X POST http://127.0.0.1:8000/system/mode -H "Content-Type: application/json" -d '{"mode": "real"}'
+```
+
+错误码沿用统一规则：`422` + `code=1000` 表示请求参数非法（非法模式、额外字段或请求体类型错误）；
+`500` + `code=3001` 表示数据库写入等内部异常（详情写日志）。
+
 ## 持久化与生命周期
 
-SQLite 只保存一张 `robot_tasks` 表：任务 ID、状态、请求 JSON、结果 JSON、错误 JSON、
-创建与更新时间（Unix 毫秒）。启动自动建表，不需要数据库服务或 ORM。
+SQLite 保存 `robot_tasks` 任务表，另有一张单行 `system_mode` 模式表（见「运行环境模式接口」）。
+`robot_tasks` 记录任务 ID、状态、请求 JSON、结果 JSON、错误 JSON、创建与更新时间（Unix 毫秒）。
+启动自动建表，不需要数据库服务或 ORM。
 数据库路径相对仓库根目录解析，默认 `database/visrl_grasp.db`。
 每次短操作独立连接，通过工作线程执行，避免数据库等待阻塞 TCP 心跳。
 数据库、锁文件及日志不提交 Git。

@@ -1,6 +1,6 @@
-# 项目进度评估（2026-11-11）
+# 项目进度评估（2026-11-14）
 
-版本：V1.0 ｜ 日期：2026-11-11 ｜ 评估对象：前端交互层并入后的仓库工作区
+版本：V1.1 ｜ 日期：2026-11-14 ｜ 评估对象：前端交互层与运行环境入口并入后的仓库工作区
 
 ## 第 1 章 结论摘要
 
@@ -11,6 +11,9 @@
   Vue3 + ECharts 可视化界面，补齐 M2 路线图中「前端静态页面」一项。
   浏览器侧已具备任务下发、规划提交、状态查询与参数配置能力，**链路止于规划**，
   不包含真实抓取执行。
+* 2026-11-14 迭代新增**运行环境入口页**：首屏仅保留项目介绍与「仿真 / 真实」两个环境按钮，
+  支持后端持久化切换与双主题（仿真绿色系 / 真实蓝色系）；真实环境在硬件未接入时如实标记为
+  界面预览（`hardware.available=false`、`degraded=true`），不改变 `plan_only` 规划语义。
 * 主要缺口集中在执行层与算法真实化：CoppeliaSim 执行驱动、夹爪/力控、`phase=placed`
   执行反馈与分拣计数推进均未实现；真实 YOLOv8 推理与 RL 策略仍走模拟/几何降级路径。
 * 本文结论依据仓库代码、`docs/` 既有文档与本轮实际运行的测试命令；未验证内容在文中标注，
@@ -23,39 +26,39 @@
 | 模块 | 主要交付物 | 状态 | 验证或依据 |
 | ---- | ---------- | ---- | ---------- |
 | common | NDJSON 报文构建/解析/校验、全局错误码、分级配置加载、日志工具 | 已完成 | `common/protocol.py`、`common/config_loader.py`、`common/log_util.py`；与 [TCP 通信协议规范](../api/tcp_communication_spec.md) 一致；单元测试 10 项通过 |
-| backend | HTTP API 4 个接口（`127.0.0.1:8000`）、内部 NDJSON TCP 服务（`127.0.0.1:9000`）、SQLite 任务记录、单实例文件锁、`plan_only` 规划网关 | 已完成（第一阶段） | [后端规划网关](../api/backend_gateway.md)、`backend/app/`、`backend/comm/`、`database/schema/robot_tasks.sql` |
+| backend | HTTP API（健康检查、机器人状态、规划提交、任务查询、运行环境模式）、内部 NDJSON TCP 服务（`127.0.0.1:9000`）、SQLite 任务与模式记录、单实例文件锁、`plan_only` 规划网关 | 已完成（第一阶段） | [后端规划网关](../api/backend_gateway.md)、`backend/app/`、`backend/comm/`、`database/schema/` |
 | embedded | C++17 运动学库（定制 UR5 解析逆解、正解回代校验、关节轨迹规划）与 TCP 规划服务 | 已完成（仅规划） | `embedded/motion/`、`embedded/comm/`、[定制 UR5 模型与解析逆运动学](custom_ur5_ik.md)；CTest 3/3 通过 |
 | algorithm | 算法服务：消费 `capture_cmd`、回报 `detection_result`；模拟检测器 + 几何默认抓取策略降级 | 已完成（模拟） | `algorithm/algorithm_service.py`、`algorithm/vision/fruit_detector.py`、`algorithm/inference/grasp_policy.py`；`use_mock=true` |
-| database | `robot_tasks` 单表（任务 ID、状态、请求/结果/错误 JSON、时间戳） | 已完成 | `database/schema/robot_tasks.sql` |
-| tests | 单元测试、集成测试与 UR5 场景位姿 fixtures；C++ 侧接入 CTest | 基线已建立 | `tests/unit/`、`tests/integration/`、`tests/fixtures/`、`embedded/CMakeLists.txt` |
+| database | `robot_tasks` 任务表（任务 ID、状态、请求/结果/错误 JSON、时间戳）与 `system_mode` 运行环境模式表（单行 id=1，sim/real CHECK） | 已完成 | `database/schema/robot_tasks.sql`、`database/schema/system_mode.sql` |
+| tests | 单元测试、集成测试与 UR5 场景位姿 fixtures；C++ 侧接入 CTest | 基线已建立（2026-11-14 全绿） | `tests/unit/`、`tests/integration/`、`tests/e2e/`、`tests/fixtures/`、`embedded/CMakeLists.txt` |
 
-### 2.2 测试基线（2026-11-11 实际运行）
+### 2.2 测试基线（2026-11-14 实际运行）
 
 | 测试集 | 命令 | 本轮结果 |
 | ------ | ---- | -------- |
 | C++ 数学、处理器与 TCP 集成 | `ctest --test-dir embedded/build -C Release --output-on-failure` | 3/3 通过（`motion_math`、`motion_processor`、`motion_tcp_integration`） |
 | Python 单元测试 | `./.venv/Scripts/python.exe -m unittest discover -s tests/unit -v` | 10 项通过 |
-| Python 集成测试（本轮新增前端网关用例） | `./.venv/Scripts/python.exe -m unittest tests.integration.test_frontend_gateway -v` | 11 项通过（约 23 秒） |
-| 既有集成测试集 | `./.venv/Scripts/python.exe -m unittest discover -s tests/integration -v` | 17/18 通过：`test_backend_gateway.py` 13/14（1 项挂起，见第 2.4 节）、`test_motion_service.py` 3/3、`test_full_loop.py` 1/1；排除挂起用例后全量（含本轮新增 11 项）共 28 项通过 |
+| Python 集成测试（整目录） | `./.venv/Scripts/python.exe -m unittest discover -s tests/integration -v` | **35 项通过**（31.7 秒，无挂起）：后端网关 14、C++ 规划服务 3、模拟分拣闭环 1、前端网关 11、运行环境模式 6 |
 | 前端交互层全链路 e2e | `./.venv/Scripts/python.exe -m unittest tests.e2e.test_frontend_full_loop -v` | 1 项通过 |
-| 前端网关 Node 单元测试 | `cd frontend; npm test` | 102 项通过（2026-11-11 实跑） |
+| 前端网关 Node 单元测试 | `cd frontend; npm test` | **107 项通过**（新增 5 项 `/api/system/mode` 代理用例） |
+| 浏览器端验收 | CDP（Chrome headless）实测 | 入口页两个按钮 → 仿真绿色主题 → 返回入口 → 真实蓝色主题 → 刷新保持真实 → 复位仿真；0 控制台错误 |
 
 ### 2.3 集成测试覆盖范围
 
 `tests/integration/` 已覆盖：后端 HTTP + 真实内部 TCP + SQLite 的第一阶段验收
 （`test_backend_gateway.py`）、C++ 规划服务注册与规划回复（`test_motion_service.py`）、
-旧版纯模拟分拣全链路（`test_full_loop.py`）。本轮前端交互层新增的网关链路测试见第 3.3 节，
-测试总入口与运行命令见 [前端网关接口文档](../api/frontend_gateway.md) 第 7 章。
+旧版纯模拟分拣全链路（`test_full_loop.py`）、前端网关链路（`test_frontend_gateway.py`）、
+运行环境模式接口与持久化（`test_system_mode.py`）。测试总入口与运行命令见
+[前端网关接口文档](../api/frontend_gateway.md) 第 7 章。
 
-### 2.4 已知测试问题（预存，非本轮引入）
+### 2.4 已知问题（2026-11-14 已修复）
 
-`tests/integration/test_backend_gateway.py` 的
-`TestBackendGateway.test_identity_bypass_and_duplicate_registration` 在 Python 3.12.4 下会
-**永久挂起**，导致整个 `tests/integration` 目录的 `discover` 无法一次跑完。定位结论为
-`asyncio.Server.wait_closed` 语义与 `backend/comm/tcp_server.py` 的 `close()` 关闭顺序不匹配，
-可稳定复现 3 次，**与本轮前端交互层改动无关**；改用单文件/单用例隔离运行后，其余 17 项与
-本轮新增 11 项全部通过。该问题涉及既有后端代码或既有测试调整，不在本轮写作用域，
-待项目负责人裁决修复方案后在相应任务中处理，本文不作「集成测试全绿」的结论。
+`tests/integration/test_backend_gateway.py::test_identity_bypass_and_duplicate_registration`
+此前在 Python 3.12.4 下永久挂起，导致整目录 `discover` 无法一次跑完。根因是
+`backend/comm/tcp_server.py::close()` 先 `wait_closed()` 后取消客户端任务，
+被拒绝的重名注册连接使关闭流程阻塞；已改为先取消客户端任务再等待监听套接字关闭，
+整目录 35 项集成测试现可一次通过（提交见 `fix: 修复内部 TCP 服务关闭顺序导致的 Python 3.12 挂起`）。
+
 
 ## 第 3 章 本轮新增：前端交互层
 
@@ -83,13 +86,17 @@ flowchart LR
 | `frontend/config/` | `base/dev/sim/real` 四级配置：网关、后端地址与 UI 参数 | 本轮新增 |
 | `deploy/start_frontend.ps1` | 前端网关一键启动（Node 检查、依赖安装、按需构建、端口占用检查、日志） | 本轮新增，用法见 [环境安装与部署指南](../deploy/env_install.md) |
 | `docs/api/frontend_gateway.md` | 前端网关 HTTP/WebSocket 对外契约、时序与配置说明 | 本轮新增 |
+| `frontend/src/views/ModeSelectView.vue`、`components/EnvironmentCard.vue` | 运行环境入口页：项目名称/简介 + 仿真、真实两个环境按钮（指针倾斜、跟随高光、扫光与辉光效果），展示硬件可用性与当前环境；版面/背景与卡面样式分别见 `assets/portal.css`、`assets/env-card.css` | 2026-11-14 新增 |
+| `frontend/src/assets/theme.css`、`utils/chart_theme.js` | 双主题：仿真环境沿用绿色系，真实环境切换为蓝色系（设计变量覆盖 + ECharts 分主题配色），顶栏环境徽标可返回入口页 | 2026-11-14 新增 |
+| `backend` 运行环境模式 | `GET/POST /system/mode` + SQLite `system_mode` 表持久化；`GET /robot/status` 与 `/health` 增加 mode/hardware 字段；real 为界面预览（`hardware.available=false`、`degraded=true`），不改变 plan_only 规划语义 | 2026-11-14 新增，契约见 [后端规划网关](../api/backend_gateway.md) |
 
 ### 3.3 新增测试
 
-| 测试 | 位置 | 说明 | 2026-11-11 结果 |
+| 测试 | 位置 | 说明 | 2026-11-14 结果 |
 | ---- | ---- | ---- | --------------- |
-| 前端网关 JS 单元测试 | `tests/unit/frontend/`（`cd frontend && npm test`） | 协议编解码、配置合并、TCP 客户端、WebSocket 会话、HTTP 代理与静态托管 | 102 项通过 |
+| 前端网关 JS 单元测试 | `tests/unit/frontend/`（`cd frontend && npm test`） | 协议编解码、配置合并、TCP 客户端、WebSocket 会话、HTTP 代理与静态托管、`/api/system/mode` 代理 | 107 项通过 |
 | 前端网关 Python 集成测试 | `tests/integration/test_frontend_gateway.py` | 假后端 + 真实网关子进程：注册、心跳、`task_start`、`task_result` 推送、代理与静态托管 | 11 项通过 |
+| 运行环境模式接口 | `tests/integration/test_system_mode.py` | 默认仿真、切 real 降级、非法参数、health/robot_status 新字段、重启持久化、切回仿真 | 6 项通过 |
 | 全链路 e2e | `tests/e2e/test_frontend_full_loop.py` | 真实后端 + 真实 C++ 规划服务 + 前端网关的规划闭环 | 1 项通过 |
 
 ### 3.4 界面示例
@@ -98,9 +105,53 @@ flowchart LR
 `executed=false`）；示例中「规划完成（未执行）」与「是否真实执行：否（仅规划）」即为当前
 `plan_only` 阶段的界面语义。
 
-![运行总览：分拣任务控制、规划提交、六轴关节轨迹与事件日志](../assets/frontend_dashboard.png)
+**运行环境入口页**：仅保留项目介绍与两个环境按钮；真实环境硬件未接入时如实标注为界面预览。
+
+![运行环境入口页：仿真 / 真实两个环境按钮](../assets/frontend_portal.png)
+
+**仿真环境（默认绿色系）**：
+
+![仿真环境运行总览：分拣任务控制、规划提交、六轴关节轨迹与事件日志](../assets/frontend_dashboard.png)
+
+**真实环境（蓝色系，当前为界面预览）**：
+
+![真实环境运行总览：蓝色主题与真实环境徽标](../assets/frontend_real_dashboard.png)
 
 ![机器人状态：在线状态、反馈来源与规划参考角](../assets/frontend_robot_status.png)
+
+### 3.5 运行环境切换链路
+
+```mermaid
+sequenceDiagram
+    participant U as 浏览器
+    participant W as 前端(Vue)
+    participant G as 前端网关
+    participant B as 后端
+    U->>W: 打开入口页 /
+    W->>G: GET /api/system/mode
+    G->>B: GET /system/mode
+    B-->>G: mode/hardware/degraded
+    G-->>W: 环境状态（按钮显示可用性或预览标记）
+    U->>W: 点击「仿真环境」或「真实环境」
+    W->>G: POST /api/system/mode {"mode":"sim|real"}
+    G->>B: POST /system/mode
+    B->>B: SQLite system_mode 持久化（id=1）
+    B-->>G: 切换后的环境状态
+    G-->>W: 200 + 状态
+    W->>W: 根元素 data-env-mode 切换主题并跳转 /dashboard
+    U->>W: 刷新页面
+    W->>B: 恢复后端权威模式（本地 localStorage 先应用防闪烁）
+```
+
+语义约定：
+
+* 「仿真 / 真实」是**运行环境模式**，与 `VISRL_ENV`（配置加载环境）相互独立；`real` 模式当前
+  只做界面预览，后端 `hardware.available=false`、`controller_connected=false`，不改变
+  `plan_only` 规划语义，也不会向控制柜下发指令。
+* 模式持久化在 SQLite `system_mode` 表，刷新与重启后保持上次选择；顶栏环境徽标可随时返回入口页切换。
+* 后端不可达时入口页按本地模式降级进入，并提示「后端环境接口不可用」，不影响页面浏览。
+* 图表在进入页面时按当前模式取色（仿真绿色系 / 真实蓝色系），避免切换后需手动刷新图表。
+
 
 ## 第 4 章 未完成事项与风险
 

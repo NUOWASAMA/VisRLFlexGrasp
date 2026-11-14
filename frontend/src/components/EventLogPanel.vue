@@ -164,7 +164,7 @@ function format_detail(detail) {
 
 .event-source--ws {
     background: var(--color-primary-soft);
-    border-color: rgba(26, 97, 74, 0.2);
+    border-color: var(--color-border-strong);
     color: var(--color-primary);
 }
 
@@ -176,8 +176,8 @@ function format_detail(detail) {
 
 .event-source--system {
     background: var(--color-accent-soft);
-    border-color: rgba(105, 208, 67, 0.35);
-    color: #3f8a1f;
+    border-color: var(--color-accent);
+    color: var(--color-primary-strong);
 }
 
 .event-item > .dot {

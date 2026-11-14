@@ -1,0 +1,405 @@
+/* 文件功能：运行环境入口页的版面与背景样式（沉浸式深色门户：氛围光、网格、噪声与品牌区） */
+/* 作者：VisRLFlexGrasp 项目组 */
+/* 创建日期：2026-11-14 */
+
+/* --------------------------------------------------------------------- */
+/* 页面骨架与背景氛围 */
+/* --------------------------------------------------------------------- */
+.portal {
+    position: relative;
+    min-height: 100vh;
+    overflow: hidden;
+    background: #070b10;
+    color: #e8eef4;
+}
+
+.portal__ambience {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.portal__aura {
+    position: absolute;
+    width: 58vw;
+    height: 58vw;
+    border-radius: 50%;
+    filter: blur(90px);
+    opacity: 0.58;
+}
+
+.portal__aura--sim {
+    top: -20vw;
+    left: -14vw;
+    background: radial-gradient(circle, rgba(46, 140, 88, 0.5), transparent 62%);
+    animation: portal-drift 26s ease-in-out infinite alternate;
+}
+
+.portal__aura--real {
+    right: -16vw;
+    bottom: -26vw;
+    background: radial-gradient(circle, rgba(40, 96, 200, 0.46), transparent 62%);
+    animation: portal-drift 32s ease-in-out infinite alternate-reverse;
+}
+
+.portal__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(120% 92% at 50% 18%, #000 0%, transparent 76%);
+    mask-image: radial-gradient(120% 92% at 50% 18%, #000 0%, transparent 76%);
+    opacity: 0.55;
+}
+
+.portal__grain {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0.028;
+}
+
+.portal__vignette {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(125% 100% at 50% 42%, transparent 38%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+.portal__frame {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 1480px;
+    min-height: 100vh;
+    margin: 0 auto;
+    padding: clamp(20px, 2.8vw, 32px) clamp(22px, 5vw, 68px) clamp(16px, 2.2vw, 26px);
+}
+
+/* --------------------------------------------------------------------- */
+/* 顶部品牌区 */
+/* --------------------------------------------------------------------- */
+.portal__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.portal__brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.portal__logo {
+    width: 42px;
+    height: 42px;
+    flex: none;
+    filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.5));
+}
+
+.portal__brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.portal__wordmark {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    color: rgba(245, 250, 255, 0.94);
+}
+
+.portal__wordmark-sub {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: rgba(196, 214, 232, 0.56);
+}
+
+.portal__top-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.portal__meta-version {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.16em;
+    color: rgba(206, 222, 238, 0.46);
+}
+
+.portal__meta-chip {
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-pill);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: rgba(210, 226, 242, 0.5);
+}
+
+/* --------------------------------------------------------------------- */
+/* 中部：介绍 + 两个环境按钮 */
+/* --------------------------------------------------------------------- */
+.portal__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(26px, 3.6vh, 44px);
+    padding: clamp(26px, 5vh, 64px) 0 clamp(18px, 3vh, 32px);
+}
+
+.portal__intro {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    max-width: 780px;
+    text-align: center;
+    animation: portal-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.portal__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.32em;
+    color: rgba(206, 224, 240, 0.52);
+}
+
+.portal__eyebrow::before,
+.portal__eyebrow::after {
+    content: "";
+    width: 26px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28));
+}
+
+.portal__eyebrow::after {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.28), transparent);
+}
+
+.portal__title {
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 600;
+    line-height: 1.18;
+    letter-spacing: 0.05em;
+    color: #f4f8fc;
+    text-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.portal__lede {
+    max-width: 620px;
+    font-size: 13.5px;
+    line-height: 1.95;
+    color: rgba(201, 218, 235, 0.7);
+}
+
+.portal__facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px clamp(18px, 3vw, 40px);
+    margin-top: 8px;
+}
+
+.portal__fact {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    row-gap: 2px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    text-align: left;
+}
+
+.portal__fact-index {
+    grid-row: span 2;
+    align-self: center;
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    color: rgba(206, 222, 238, 0.32);
+}
+
+.portal__fact-label {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: rgba(223, 234, 245, 0.92);
+}
+
+.portal__fact-detail {
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: rgba(201, 218, 235, 0.46);
+}
+
+.portal__choices {
+    display: grid;
+    grid-template-columns: minmax(0, 368px) 1px minmax(0, 368px);
+    align-items: stretch;
+    justify-content: center;
+    gap: 0 clamp(22px, 3.2vw, 52px);
+    width: 100%;
+    animation: portal-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) 0.08s both;
+}
+
+.portal__divider {
+    position: relative;
+    align-self: center;
+    width: 1px;
+    height: 68%;
+    background: linear-gradient(
+        180deg,
+        transparent,
+        rgba(255, 255, 255, 0.16) 32%,
+        rgba(255, 255, 255, 0.16) 68%,
+        transparent
+    );
+}
+
+.portal__divider-orb {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    border: 1px solid rgba(214, 230, 246, 0.36);
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+/* --------------------------------------------------------------------- */
+/* 底部提示与页脚 */
+/* --------------------------------------------------------------------- */
+.portal__hint {
+    max-width: 620px;
+    font-size: 11px;
+    line-height: 1.8;
+    letter-spacing: 0.02em;
+    color: rgba(196, 214, 232, 0.4);
+    text-align: center;
+}
+
+.portal__error {
+    padding: 8px 14px;
+    border: 1px solid rgba(232, 178, 92, 0.32);
+    border-radius: var(--radius-sm);
+    background: rgba(232, 178, 92, 0.08);
+    font-size: 11.5px;
+    color: rgba(244, 206, 146, 0.92);
+}
+
+.portal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    color: rgba(196, 214, 232, 0.3);
+}
+
+/* --------------------------------------------------------------------- */
+/* 动画与响应式 */
+/* --------------------------------------------------------------------- */
+@keyframes portal-rise {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes portal-drift {
+    from {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    to {
+        transform: translate3d(2.5vw, 2vw, 0) scale(1.06);
+    }
+}
+
+@media (max-width: 1120px) {
+    .portal__choices {
+        grid-template-columns: minmax(0, 560px);
+        gap: 16px;
+    }
+
+    .portal__divider {
+        display: none;
+    }
+}
+
+@media (max-width: 720px) {
+    .portal__brand-text {
+        display: none;
+    }
+
+    .portal__top-meta {
+        padding-top: 0;
+    }
+
+    .portal__title {
+        font-size: 30px;
+    }
+
+    .portal__main {
+        gap: 22px;
+    }
+
+    .portal__facts {
+        gap: 10px 18px;
+    }
+
+    .portal__fact-detail {
+        display: none;
+    }
+
+    .portal__eyebrow {
+        font-size: 9px;
+        letter-spacing: 0.16em;
+        gap: 8px;
+    }
+
+    .portal__eyebrow::before,
+    .portal__eyebrow::after {
+        width: 14px;
+    }
+
+    .portal__footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .portal__aura,
+    .portal__intro,
+    .portal__choices {
+        animation: none;
+    }
+}

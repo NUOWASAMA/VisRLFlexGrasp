@@ -11,9 +11,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from backend.app.model.gateway_lock import GatewayLock
+from backend.app.model.mode_repository import ModeRepository
 from backend.app.model.task_repository import TaskRepository, timestamp_ms
+from backend.app.schema.mode_request import ModeSwitchRequest
 from backend.app.schema.robot_request import PlanRequest
 from backend.app.service.dispatch_service import DispatchService
+from backend.app.service.mode_service import ModeService
 from backend.app.service.robot_service import GatewayError, RobotService
 from backend.comm.kinematics_adapter import KinematicsAdapter
 from backend.comm.tcp_server import TcpDispatchServer
@@ -31,11 +34,11 @@ def response(data=None, code=0, message="success"):
 
 
 def configure_logs(path, level):
-    """四个后端模块共用轮转日志；返回清理函数以关闭文件并恢复原日志级别。"""
+    """各后端模块共用轮转日志；返回清理函数以关闭文件并恢复原日志级别。"""
     path.parent.mkdir(parents=True, exist_ok=True)
     handler = RotatingFileHandler(path, maxBytes=1_048_576, backupCount=3, encoding="utf-8")
     handler.setFormatter(logging.Formatter(LOG_FORMAT, DATE_FORMAT))
-    names = ("backend.api", "backend.robot", "backend.dispatch", "backend.tcp_server")
+    names = ("backend.api", "backend.robot", "backend.dispatch", "backend.tcp_server", "backend.mode")
     levels = {name: logging.getLogger(name).level for name in names}
     for name in names:
         get_logger(name, level).addHandler(handler)
@@ -54,6 +57,8 @@ def create_app(config=None):
     config = load_config(str(REPO_ROOT / "backend/config")) if config is None else config
     settings = GatewaySettings.from_config(config)
     repository = TaskRepository(settings.database_path, REPO_ROOT / "database/schema/robot_tasks.sql")
+    mode_repository = ModeRepository(settings.database_path, REPO_ROOT / "database/schema/system_mode.sql")
+    mode_service = ModeService(mode_repository)
     lock = GatewayLock(settings.database_path)
     server = TcpDispatchServer(config["server"]["host"], config["server"]["port"])
     adapter = KinematicsAdapter(server)
@@ -81,6 +86,7 @@ def create_app(config=None):
             await asyncio.to_thread(repository.initialize)
             recovered = await asyncio.to_thread(repository.recover_interrupted)
             logger.info("恢复历史任务，标记中断 %d 项", recovered)
+            await asyncio.to_thread(mode_service.initialize)
             await server.open()
             cleanup.push_async_callback(server.close)
             cleanup.push_async_callback(dispatch.close)
@@ -91,6 +97,7 @@ def create_app(config=None):
     app.state.robot = robot
     app.state.tcp_server = server
     app.state.repository = repository
+    app.state.mode_service = mode_service
 
     @app.exception_handler(GatewayError)
     async def gateway_error(request: Request, error: GatewayError):
@@ -110,11 +117,23 @@ def create_app(config=None):
 
     @app.get("/health")
     async def health():
-        return response({"status": "ok", "execution_mode": "plan_only"})
+        return response({"status": "ok", "execution_mode": "plan_only", "mode": mode_service.current_mode()})
 
     @app.get("/robot/status")
     async def robot_status():
-        return response(robot.status())
+        status = robot.status()
+        status["mode"] = mode_service.current_mode()
+        status["hardware_available"] = mode_service.hardware_available()
+        return response(status)
+
+    @app.get("/system/mode")
+    async def get_system_mode():
+        return response(await mode_service.get_state())
+
+    @app.post("/system/mode")
+    async def switch_system_mode(request: ModeSwitchRequest):
+        """切换运行环境模式；real 只用于界面预览，硬件不可用时如实标记 degraded。"""
+        return response(await mode_service.switch(request.mode))
 
     @app.post("/robot/plan", status_code=202)
     async def plan(request: PlanRequest):

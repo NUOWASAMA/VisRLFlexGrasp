@@ -99,6 +99,8 @@ npm test             # 运行前端网关 Node 单元测试
 | `GET /api/robot/status` | `GET /robot/status` | motion 在线、忙碌状态、当前任务与反馈来源 | `200`，`data` 含 `motion_online`、`busy`、`active_task_id` 等 |
 | `POST /api/robot/plan` | `POST /robot/plan` | 提交世界坐标系 TCP 目标，登记规划任务 | `202`，`data.task_id`、`data.status=planning`、`data.task_url` |
 | `GET /api/tasks/{task_id}` | `GET /tasks/{task_id}` | 查询 SQLite 中的请求、状态、结果与错误 | `200`，`data.status` 为 `planning/planned/failed/interrupted` |
+| `GET /api/system/mode` | `GET /system/mode` | 查询运行环境模式（仿真/真实）与真实硬件可用性 | `200`，`data` 含 `mode`、`available_modes`、`hardware`、`degraded`、`updated_at` |
+| `POST /api/system/mode` | `POST /system/mode` | 切换并持久化运行环境模式，请求体 `{"mode": "sim"}` 或 `{"mode": "real"}` | `200`，`data` 为切换后的模式状态（字段同上） |
 
 * `task_id` 段必须非空；查询字符串原样保留。
 * 在 `/api` 前缀下，不属于上表的路径或方法与路径不匹配（如 `GET /api/robot/plan`）返回
@@ -106,6 +108,10 @@ npm test             # 运行前端网关 Node 单元测试
 * `POST /api/robot/plan` 的请求体上限为 1 MiB，超限返回 `413`、`code=1000`。
 * 后端错误状态码不经改写，例如 `409`（已有规划任务）、`422`（参数非法）、`500`（内部错误）
   与后端任务错误码一并原样透传，具体字段见 [后端规划网关](backend_gateway.md)。
+* `/api/system/mode` 的 `GET` 原样转发查询串，`POST` 原样转发 JSON 请求体，状态码沿用后端
+  （成功 `200`、非法模式 `422` 与 `code=1000`、数据库异常 `500` 与 `code=3001`）。网关仅额外
+  校验请求体 JSON 语法，非法 JSON 直接返回 `400`、`code=1001`，不向后端透传；字段与真实环境
+  降级语义见 [后端规划网关](backend_gateway.md) 的「运行环境模式接口」。
 
 ### 3.2 网关自身接口
 
@@ -314,7 +320,7 @@ Python 侧未单独覆盖该路径，真实后端联调时需人工确认 `reque
   当前后端实现必定回 `register_ack`、`error_report` 或断开连接，风险较低，后续加固项为增加注册超时。
 * **本机安全边界**：未校验 WebSocket `Origin` / `Host`（无认证、仅回环监听，且当前 `plan_only`
   不执行实际抓取）；对外部署前需增加 Origin/Host 白名单与认证。
-* **代理范围固定**：仅代理第 3.1 节列出的四个业务接口，不做任意路径透传；请求头只透传
+* **代理范围固定**：仅代理第 3.1 节列出的接口，不做任意路径透传；请求头只透传
   `content-type` 与 `content-length`，不代理 Cookie / 认证头。
 * **静态托管不含构建**：网关只托管 `frontend/dist`，不会自动构建；缺失时以 `503` 提示。
 * **无消息回放**：WebSocket 不保存离线消息，也没有消息队列；重连后由前端重新拉取状态；

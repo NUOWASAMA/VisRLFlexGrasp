@@ -14,6 +14,58 @@ export const APP_FOOTER = 'VisRLFlexGrasp 项目组 · 第一阶段仅规划（p
 export const APP_VERSION = 'v0.1.0'
 
 // ---------------------------------------------------------------------------
+// 运行环境模式：入口页两个按钮（仿真 / 真实），与后端 /system/mode 字段严格一致
+// ---------------------------------------------------------------------------
+export const ENV_MODES = {
+    SIM: 'sim',
+    REAL: 'real',
+}
+export const DEFAULT_ENV_MODE = ENV_MODES.SIM
+export const VALID_ENV_MODES = [ENV_MODES.SIM, ENV_MODES.REAL]
+export const PORTAL_ROUTE_NAME = 'mode-select'
+export const MODE_SWITCH_TIMEOUT_MS = 4000
+
+// 入口页环境按钮文案与视觉标识；key 与后端 mode 取值一致
+export const ENV_MODE_OPTIONS = [
+    {
+        key: ENV_MODES.SIM,
+        index: '01',
+        en: 'SIMULATION',
+        label: '仿真环境',
+        description: 'CoppeliaSim 场景与规划链路，用于算法快速迭代和抓取验证。',
+        spec: 'COPPELIASM 4.10',
+        enter_label: '进入仿真环境',
+        status_available: '场景与规划链路可用',
+        status_unavailable: '仿真适配器未就绪',
+    },
+    {
+        key: ENV_MODES.REAL,
+        index: '02',
+        en: 'HARDWARE',
+        label: '真实环境',
+        description: 'UR5 + RG2 实体产线，用于硬件联调、力控与无损分拣验证。',
+        spec: 'UR5 · RG2',
+        enter_label: '进入真实环境',
+        status_available: '控制柜与夹爪在线',
+        status_unavailable: '硬件适配器未接入 · 界面预览',
+    },
+]
+
+// 入口页介绍信息：只保留三条与项目核心能力对应的说明，避免堆砌
+export const PORTAL_FACTS = [
+    { index: '01', label: '视觉感知', detail: '果蔬目标检测与位姿解算' },
+    { index: '02', label: '强化学习', detail: '自适应抓取策略与夹持力决策' },
+    { index: '03', label: '柔性抓取', detail: '力控约束下的无损分拣' },
+]
+export const PORTAL_EYEBROW = '运行环境 / RUNTIME ENVIRONMENT'
+export const PORTAL_TITLE = '选择进入的环境'
+export const PORTAL_LEDE =
+    '同一套视觉感知与运动规划链路，可在仿真验证与真实产线之间切换。仿真用于算法快速迭代，真实环境用于硬件联调与力控验证。'
+export const PORTAL_HINT = '进入后可随时通过顶栏环境标识返回本页切换；当前各环境均处于仅规划（plan_only）阶段。'
+export const PORTAL_FOOTER_LEFT = 'VisRLFlexGrasp 项目组'
+export const PORTAL_FOOTER_RIGHT = '仿真优先 · SIM-FIRST'
+
+// ---------------------------------------------------------------------------
 // 接口路径：浏览器同源访问前端网关，统一 /api 前缀；WebSocket 默认 /ws
 // ---------------------------------------------------------------------------
 export const API_PREFIX = '/api'
@@ -25,6 +77,7 @@ export const API_PATHS = {
     HEALTH: '/health',
     ROBOT_STATUS: '/robot/status',
     ROBOT_PLAN: '/robot/plan',
+    SYSTEM_MODE: '/system/mode',
     TASK_PREFIX: '/tasks/',
 }
 
@@ -97,6 +150,30 @@ export const CHART_COLORS = ['#1a614a', '#2e8b57', '#69d043', '#3aa6a0', '#4f86c
 export const CHART_TEXT_COLOR = '#4a5f56'
 export const CHART_AXIS_LINE_COLOR = '#c8d9d0'
 export const CHART_SPLIT_LINE_COLOR = '#e8f0ec'
+
+// 分环境图表配色：仿真沿用绿色系，真实环境切换为蓝色系；图表在路由切换后按当前模式重建
+export const CHART_THEMES = {
+    [ENV_MODES.SIM]: {
+        colors: CHART_COLORS,
+        text: CHART_TEXT_COLOR,
+        axis_line: CHART_AXIS_LINE_COLOR,
+        split_line: CHART_SPLIT_LINE_COLOR,
+        tooltip_background: 'rgba(18, 40, 32, 0.92)',
+        tooltip_text: '#f2f8f5',
+        zoom_background: 'rgba(26, 97, 74, 0.06)',
+        zoom_filler: 'rgba(26, 97, 74, 0.14)',
+    },
+    [ENV_MODES.REAL]: {
+        colors: ['#1c4f9c', '#2f6fd0', '#4f9dff', '#2f9fc4', '#6f7fd8', '#3f8fd0'],
+        text: '#46566b',
+        axis_line: '#c6d5e6',
+        split_line: '#e7eef7',
+        tooltip_background: 'rgba(13, 27, 46, 0.94)',
+        tooltip_text: '#eef5ff',
+        zoom_background: 'rgba(28, 79, 156, 0.06)',
+        zoom_filler: 'rgba(28, 79, 156, 0.16)',
+    },
+}
 export const CHART_FONT_FAMILY =
     '"Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Segoe UI", system-ui, sans-serif'
 export const CHART_ANIMATION_DURATION_MS = 400
@@ -118,6 +195,7 @@ export const STORAGE_PREFIX = 'visrl_flex_grasp'
 export const STORAGE_KEYS = {
     UI_SETTINGS: 'ui_settings',
     TASK_HISTORY: 'task_history',
+    ENV_MODE: 'env_mode',
 }
 
 // ---------------------------------------------------------------------------
@@ -130,10 +208,10 @@ export const WS_STATE = {
 }
 
 // ---------------------------------------------------------------------------
-// 顶栏导航（路由名与路由表 router/index.js 保持一致）
+// 顶栏导航（路由名与路由表 router/index.js 保持一致；入口页 mode-select 不进入顶栏）
 // ---------------------------------------------------------------------------
 export const NAV_ITEMS = [
-    { name: 'dashboard', path: '/', label: '总览' },
+    { name: 'dashboard', path: '/dashboard', label: '总览' },
     { name: 'robot', path: '/robot', label: '机器人状态' },
     { name: 'tasks', path: '/tasks', label: '任务查询' },
     { name: 'settings', path: '/settings', label: '参数配置' },
