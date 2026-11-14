@@ -67,18 +67,26 @@ class TcpDispatchServer:
         logger.info("TCP 调度服务已启动，监听 %s", self._server.sockets[0].getsockname())
 
     async def close(self):
-        """停止巡检、监听和客户端任务，等待套接字关闭。"""
-        if self._server is not None:
-            self._server.close()
-            await self._server.wait_closed()
-            self._server = None
+        """停止监听、巡检和客户端任务，等待套接字关闭。
+
+        关闭顺序约束：Python 3.12 起 Server.wait_closed 会等待全部连接处理器退出，
+        必须先取消客户端任务再等待监听套接字，否则对端未断开时关闭会永久挂起。
+        """
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.close()
+        tasks = [task for task in list(self._client_tasks) if task is not asyncio.current_task()]
+        for task in tasks:
+            task.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        if server is not None:
+            await server.wait_closed()
         if self._patrol_task is not None:
             self._patrol_task.cancel()
             await asyncio.gather(self._patrol_task, return_exceptions=True)
             self._patrol_task = None
-        for task in list(self._client_tasks):
-            task.cancel()
-        await asyncio.gather(*self._client_tasks, return_exceptions=True)
 
     async def start(self) -> None:
         """启动监听与心跳巡检任务，本方法会阻塞直至服务关闭"""
